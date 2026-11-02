@@ -195,10 +195,10 @@ def fake(aioclient_mock: AiohttpClientMocker) -> FakeMef:
 
 @pytest.fixture
 async def setup(hass: HomeAssistant, fake: FakeMef, freezer):
-    """Set the account up on NOW, with the given options."""
+    """Set the account up on NOW (or the given time), with the given options."""
 
-    async def _setup(options: dict | None = None) -> MockConfigEntry:
-        freezer.move_to(NOW)
+    async def _setup(options: dict | None = None, now: datetime = NOW) -> MockConfigEntry:
+        freezer.move_to(now)
         await hass.config.async_set_time_zone("Europe/Paris")
         entry = MockConfigEntry(
             domain=DOMAIN,
