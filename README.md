@@ -22,7 +22,7 @@ Vous ajoutez votre compte Mon Espace Famille (e-mail et mot de passe de l'applic
 | `binary_sensor.alice_cantine_demain` | La même chose pour demain | Éteint |
 | `binary_sensor.alice_reservation_manquante` | Allumé si la semaine prochaine a un jour où la cantine est ouverte sans repas réservé ; attribut `jours` | Allumé, `["2026-11-12"]` |
 | `sensor.alice_prochain_repas` | Le prochain jour avec un repas réservé ; attribut `dans_jours` | 05/11/2026 |
-| `sensor.alice_repas_cette_semaine` | Nombre de jours réservés cette semaine, un capteur par service (`accueil_matin`, `accueil_soir`, `etude`…) ; attribut `jours` | 4 |
+| `sensor.alice_repas_cette_semaine` | Nombre de jours réservés cette semaine, un capteur par service (`accueil_matin`, `accueil_soir`, `etude`…) ; attributs `jours`, `aujourd_hui` et `demain` (réservé ou non, y compris le dimanche pour le lundi) | 4 |
 | `binary_sensor.alice_accueil_du_soir_aujourd_hui` | Allumé si l'accueil du soir ou l'étude est réservé aujourd'hui ; attributs `service` (`accueil_soir` ou `etude`), `annulable_jusqu_au` | Allumé, `accueil_soir` |
 | `sensor.alice_retour_prevu` | Heure de retour à la maison prévue aujourd'hui (horodatage) : fin du service du soir (18 h 45) + 10 min s'il y en a un, sinon fin de la classe (16 h 30) + 10 min ; inconnu si rien n'est réservé aujourd'hui ; attribut `service_du_soir` | 18:55 |
 | `binary_sensor.alice_hors_de_la_maison` | Allumé du départ au retour prévu, les jours avec au moins une réservation : départ à 7 h si l'accueil du matin est réservé, sinon 8 h 10 ; bascule à l'heure dite, sans attendre la relecture ; attributs `depart`, `retour_prevu` | Éteint |
@@ -160,7 +160,7 @@ You add your Mon Espace Famille account (the app's email and password). Each chi
 | `binary_sensor.alice_cantine_demain` | The same for tomorrow | Off |
 | `binary_sensor.alice_reservation_manquante` | On when next week has a day the canteen is open with no meal booked; `jours` attribute | On, `["2026-11-12"]` |
 | `sensor.alice_prochain_repas` | The next day with a meal booked; `dans_jours` attribute | 2026-11-05 |
-| `sensor.alice_repas_cette_semaine` | Days booked this week, one sensor per service (`accueil_matin`, `accueil_soir`, `etude`…); `jours` attribute | 4 |
+| `sensor.alice_repas_cette_semaine` | Days booked this week, one sensor per service (`accueil_matin`, `accueil_soir`, `etude`…); attributes `jours`, `aujourd_hui` and `demain` (booked or not, Sunday's tomorrow being Monday included) | 4 |
 | `binary_sensor.alice_accueil_du_soir_aujourd_hui` | On when evening care or study hall is booked today; `service` (`accueil_soir` or `etude`) and `annulable_jusqu_au` attributes | On, `accueil_soir` |
 | `sensor.alice_retour_prevu` | Expected arrival home today (timestamp): end of the evening service (18:45) + 10 min when there is one, else end of school (16:30) + 10 min; unknown when nothing is booked today; `service_du_soir` attribute | 18:55 |
 | `binary_sensor.alice_hors_de_la_maison` | On from departure to the expected return, on days with at least one booking: departure at 7:00 when morning care is booked, else 8:10; flips on time without waiting for a refresh; `depart` and `retour_prevu` attributes | Off |

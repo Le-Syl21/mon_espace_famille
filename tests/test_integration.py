@@ -40,6 +40,8 @@ async def test_entities(hass: HomeAssistant, setup, aioclient_mock: AiohttpClien
     meals = state(hass, "sensor.alice_repas_cette_semaine")
     assert meals.state == "4"
     assert meals.attributes["jours"] == ["2026-11-02", "2026-11-03", "2026-11-05", "2026-11-06"]
+    # Wednesday 4: no meal today, Thursday's is booked.
+    assert meals.attributes["aujourd_hui"] is False and meals.attributes["demain"] is True
     assert state(hass, "sensor.alice_accueil_soir_cette_semaine").state == "0"
     assert state(hass, "sensor.alice_etude_cette_semaine").state == "0"
     assert state(hass, "binary_sensor.alice_reservation_manquante").state == "off"

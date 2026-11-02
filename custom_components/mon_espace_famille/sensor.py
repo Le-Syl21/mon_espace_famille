@@ -106,4 +106,13 @@ class WeekSensor(ChildEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
-        return {"jours": [d.isoformat() for d in self._days()]}
+        service = self.child.services.get(self.service_id) if self.child else None
+        today = dt_util.now().date()
+        # Today and tomorrow are read from the days fetched, not from the
+        # week above: on a Sunday, tomorrow belongs to next week.
+        booked = service.reserved_days(today, today + timedelta(days=2)) if service else []
+        return {
+            "jours": [d.isoformat() for d in self._days()],
+            "aujourd_hui": today in booked,
+            "demain": today + timedelta(days=1) in booked,
+        }
