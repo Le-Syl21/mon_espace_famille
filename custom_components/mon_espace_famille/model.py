@@ -64,7 +64,7 @@ class Service:
     """A service the child is registered to, over the weeks fetched."""
 
     id: str  # "1_1": the API's serviceReservationId
-    service_id: int  # "idService": the régie the service belongs to
+    service_id: int  # the cart's serviceId: the number before "_" in the id
     label: str
     kind: str | None
     # Days that can be booked (holidays and closed days are not listed), and
@@ -144,9 +144,12 @@ def merge_week(child: Child, monday: date, services: list[dict]) -> None:
         service = child.services.get(sid)
         if service is None:
             label = str(raw.get("label") or sid).strip()
+            # The cart wants the service's own number, the one before "_" in
+            # "7_7"; "idService" is the régie (1 for every service here), and
+            # a cart carrying it is queued by the server and then dropped.
             try:
-                service_id = int(raw.get("idService"))
-            except (TypeError, ValueError):
+                service_id = int(sid.split("_", 1)[0])
+            except ValueError:
                 service_id = 0
             service = child.services[sid] = Service(
                 id=sid, service_id=service_id, label=label, kind=service_kind(label)

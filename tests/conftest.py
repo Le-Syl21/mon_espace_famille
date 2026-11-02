@@ -134,7 +134,9 @@ class FakeMef:
         self.bodies.append(data)
         pairs = parse_qsl(data, keep_blank_values=True)
         assert [k for k, _ in pairs] == ["cart"]
-        item = json.loads(pairs[0][1])
+        entries = json.loads(pairs[0][1])
+        assert isinstance(entries, list) and len(entries) == 1
+        item = entries[0]
         self.carts.append(item)
         if self.apply_carts:
             self._apply(item)

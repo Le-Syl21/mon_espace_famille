@@ -32,6 +32,8 @@ def test_week_keeps_its_own_seven_days() -> None:
     merge_week(child, date(2026, 11, 2), load("alice_20261102.json"))
     meals = child.services["1_1"]
     assert meals.kind == "repas" and meals.service_id == 1
+    # The cart's serviceId is the number in the id, not the régie's idService.
+    assert child.services["7_7"].service_id == 7
     # The answer also lists Monday 9: it belongs to the next week.
     assert sorted(meals.open_days) == [date(2026, 11, 5), date(2026, 11, 6)]
     assert {d: e.status for d, e in meals.days.items()} == {

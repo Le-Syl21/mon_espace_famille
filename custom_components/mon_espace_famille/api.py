@@ -40,6 +40,8 @@ def encode_form(fields: dict[str, Any]) -> str:
 
     Objects and lists are sent as JSON, and a list field repeats its key once
     per element: {"cart": [item]} becomes `cart=<URL-encoded JSON of item>`.
+    The reservations endpoint wants that item to be a list of per-child
+    entries, so `send_cart` sends {"cart": [[entry]]}.
     """
 
     def one(key: str, value: Any) -> str:
@@ -191,9 +193,13 @@ class MefClient:
         return body
 
     async def send_cart(self, cart_item: dict) -> None:
-        """Send one child's bookings and cancellations; the server queues them."""
+        """Send one child's bookings and cancellations; the server queues them.
+
+        Checked against the server: `cart=<JSON list of entries>` is applied
+        within seconds, while a bare entry is queued and silently dropped.
+        """
         body = await self.request(
-            "POST", "family/children/reservations", form=encode_form({"cart": [cart_item]})
+            "POST", "family/children/reservations", form=encode_form({"cart": [[cart_item]]})
         )
         if not isinstance(body, dict) or body.get("status") != "queued":
             raise MefError(f"reservations: unexpected answer {body!r}")

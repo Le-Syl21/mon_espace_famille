@@ -123,14 +123,14 @@ def test_events_of_other_services() -> None:
     child = Child(id=1, first_name="Alice")
     child.services["3_3"] = Service(
         id="3_3",
-        service_id=1,
+        service_id=3,
         label="MERCREDI LOISIRS",
         kind=None,
         days={day: Day("absence_justifiee"), date(2026, 11, 10): Day("present")},
     )
     child.services["6_6"] = Service(
         id="6_6",
-        service_id=1,
+        service_id=6,
         label="ACCUEIL MATIN",
         kind="accueil_matin",
         days={day: Day("absent")},

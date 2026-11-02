@@ -21,8 +21,8 @@ def _device(hass: HomeAssistant, name: str) -> str:
 
 
 def _form(item: dict) -> str:
-    """What the web app sends: cart=<URL-encoded JSON>."""
-    text = json.dumps(item, ensure_ascii=False, separators=(",", ":"))
+    """What the server applies: cart=<URL-encoded JSON list of one entry>."""
+    text = json.dumps([item], ensure_ascii=False, separators=(",", ":"))
     return "cart=" + quote(text, safe="!'()*~")
 
 
@@ -47,7 +47,7 @@ async def test_book(hass: HomeAssistant, setup, fake: FakeMef) -> None:
             {
                 "dates": [{"date": "20261112"}, {"date": "20261116"}],
                 "serviceReservationId": "7_7",
-                "serviceId": 1,
+                "serviceId": 7,
             }
         ],
         "cancelationReservations": [],
@@ -55,7 +55,7 @@ async def test_book(hass: HomeAssistant, setup, fake: FakeMef) -> None:
     assert fake.carts == [cart]
     assert fake.bodies == [_form(cart)]
     assert fake.bodies[0].startswith(
-        "cart=%7B%22childId%22%3A101%2C%22servicesReservations%22%3A%5B%7B%22dates%22%3A%5B"
+        "cart=%5B%7B%22childId%22%3A101%2C%22servicesReservations%22%3A%5B%7B%22dates%22%3A%5B"
     )
     # The entities follow without waiting for the next poll.
     week = hass.states.get("sensor.alice_accueil_soir_cette_semaine")
@@ -151,7 +151,7 @@ async def test_cancel(hass: HomeAssistant, setup, fake: FakeMef) -> None:
             {
                 "dates": [{"date": "20261113"}],
                 "serviceReservationId": "7_7",
-                "serviceId": 1,
+                "serviceId": 7,
                 "reservationsIds": [5011],
             }
         ],
