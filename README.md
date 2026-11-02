@@ -40,12 +40,35 @@ Deux actions, `mon_espace_famille.reserver` et `mon_espace_famille.annuler` :
 ```yaml
 action: mon_espace_famille.reserver
 data:
-  enfant: 0123456789abcdef0123456789abcdef  # l'appareil de l'enfant (ou une de ses entités)
-  service: accueil_soir                     # repas, accueil_matin, accueil_soir ou etude
+  enfant: calendar.alice_periscolaire   # une entité de l'enfant (ou son appareil)
+  service: accueil_soir                 # repas, accueil_matin, accueil_soir ou etude
   dates:
-    - "2026-11-12"
+    - "2026-11-12"                      # AAAA-MM-JJ ou JJ/MM/AAAA
     - "2026-11-16"
 ```
+
+Le plus simple pour essayer : *Outils de développement* → *Actions*, choisissez l'action, l'enfant, le service et les dates. L'action répond avec la liste des dates réellement réservées (ou annulées).
+
+Pour réserver d'un clic depuis le tableau de bord, faites un script avec un champ date, puis un bouton qui l'appelle :
+
+```yaml
+script:
+  cantine_alice:
+    alias: Réserver la cantine d'Alice
+    fields:
+      jour:
+        name: Jour
+        selector:
+          date:
+    sequence:
+      - action: mon_espace_famille.reserver
+        data:
+          enfant: calendar.alice_periscolaire
+          service: repas
+          dates: ["{{ jour }}"]
+```
+
+`mon_espace_famille.annuler` prend les mêmes champs.
 
 Avant d'envoyer quoi que ce soit, l'intégration relit les semaines concernées et refuse, avec un message clair :
 - un service auquel l'enfant n'est pas inscrit ;
@@ -112,6 +135,7 @@ Les jours sans réservation, `retour_prevu` est inconnu : la condition est fauss
 
 ### Limites
 
+- Réserver et annuler des jours, oui ; **inscrire** un enfant à un service pour l'année (par exemple l'accueil du matin qu'on n'avait pas coché en début d'année), non : le portail traite cela comme une demande que la mairie valide, à faire sur le portail.
 - Mon Espace Famille ne publie pas d'API : l'intégration parle à celle de son application web, qui peut changer sans prévenir.
 - Testée avec une seule commune, où les services sont payés après coup. Une commune en prépaiement, où il faut payer pour valider le panier, n'est pas prise en charge.
 - Les horaires (calendrier, départ à 8 h 10 ou 7 h, fin de classe, marge de trajet de 10 min) sont ceux de cette commune et les mêmes tous les jours (ils se changent dans `const.py`).
@@ -149,7 +173,40 @@ The data is read every 30 minutes: the current week and the next 3 (*Configure* 
 
 ### Booking and cancelling
 
-Two actions, `mon_espace_famille.reserver` (book) and `mon_espace_famille.annuler` (cancel), with the fields `enfant` (the child's device, or one of its entities), `service` (`repas`, `accueil_matin`, `accueil_soir` or `etude`) and `dates`.
+Two actions, `mon_espace_famille.reserver` (book) and `mon_espace_famille.annuler` (cancel), with the fields `enfant` (the child's device, or one of its entities), `service` (`repas`, `accueil_matin`, `accueil_soir` or `etude`) and `dates` (`YYYY-MM-DD` or `DD/MM/YYYY`):
+
+```yaml
+action: mon_espace_famille.reserver
+data:
+  enfant: calendar.alice_periscolaire   # an entity of the child (or its device)
+  service: accueil_soir                 # repas, accueil_matin, accueil_soir or etude
+  dates:
+    - "2026-11-12"
+    - "2026-11-16"
+```
+
+The easiest way to try it: *Developer tools* → *Actions*, pick the action, the child, the service and the dates. The action answers with the list of dates actually booked (or cancelled).
+
+To book with one tap from a dashboard, make a script with a date field, then a button that calls it:
+
+```yaml
+script:
+  alice_canteen:
+    alias: Book Alice's canteen
+    fields:
+      jour:
+        name: Day
+        selector:
+          date:
+    sequence:
+      - action: mon_espace_famille.reserver
+        data:
+          enfant: calendar.alice_periscolaire
+          service: repas
+          dates: ["{{ jour }}"]
+```
+
+`mon_espace_famille.annuler` takes the same fields.
 
 Before sending anything the integration reads the weeks concerned again and refuses, with a clear message, a service the child is not registered to, a booking on a day the service is closed or past its booking deadline, and a cancellation of a day not booked or past its cancellation deadline. Days already booked are skipped. Mon Espace Famille answers "queued": the integration then reads the week again until the change shows (ten seconds at most) and raises an error if it does not.
 
@@ -189,6 +246,7 @@ On days with no booking `retour_prevu` is unknown, the condition is false and th
 
 ### Limits
 
+- Booking and cancelling days works; **registering** a child to a service for the year (for instance the morning care that was not ticked at the start of the year) does not: the portal handles it as a request that the town hall validates, so do it on the portal.
 - Mon Espace Famille publishes no API: the integration talks to its web app's one, which may change without notice.
 - Tested with a single commune, where services are paid afterwards. A commune where the cart must be paid in advance is not supported.
 - The hours (calendar, 8:10 or 7:00 departure, end of school, 10-minute travel margin) are that commune's, the same every day (they live in `const.py`).
