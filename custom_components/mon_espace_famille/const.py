@@ -39,8 +39,22 @@ KIND_KEYWORDS: Final = (
     (KIND_REPAS, ("REPAS", "CANTINE", "RESTAURATION", "DEJEUNER", "MIDI")),
 )
 
-# Calendar names and hours of each kind, from the commune it was written
-# for: périscolaire from 7:00 to 18:45, classes 8:30–11:30 and 13:30–16:30.
+# The commune's day, which the calendar and the "at home" sensors share:
+# périscolaire from 7:00 to 18:45, classes 8:30–11:30 and 13:30–16:30.
+MORNING_CARE_START: Final = time(7, 0)
+SCHOOL_START: Final = time(8, 30)
+SCHOOL_END: Final = time(16, 30)
+EVENING_SERVICE_END: Final = time(18, 45)
+# The child leaves home at the first time when a morning care is booked, and
+# at the second one otherwise (a little before the school's doors open).
+DEPARTURE_MORNING_CARE: Final = time(7, 0)
+DEPARTURE_SCHOOL: Final = time(8, 10)
+# Added to the end of school or of the evening service to get the arrival home.
+TRAVEL_MARGIN: Final = timedelta(minutes=10)
+# Evening services, the first one booked wins when both are.
+EVENING_KINDS: Final = (KIND_ACCUEIL_SOIR, KIND_ETUDE)
+
+# Calendar names and hours of each kind.
 # A service of unknown kind becomes an all-day event.
 KIND_NAMES: Final = {
     KIND_REPAS: "Cantine",
@@ -49,10 +63,10 @@ KIND_NAMES: Final = {
     KIND_ETUDE: "Étude",
 }
 KIND_HOURS: Final = {
-    KIND_ACCUEIL_MATIN: (time(7, 0), time(8, 30)),
+    KIND_ACCUEIL_MATIN: (MORNING_CARE_START, SCHOOL_START),
     KIND_REPAS: (time(11, 30), time(13, 30)),
-    KIND_ETUDE: (time(16, 30), time(18, 45)),
-    KIND_ACCUEIL_SOIR: (time(16, 30), time(18, 45)),
+    KIND_ETUDE: (SCHOOL_END, EVENING_SERVICE_END),
+    KIND_ACCUEIL_SOIR: (SCHOOL_END, EVENING_SERVICE_END),
 }
 
 # What a day of a service can be, as the API lists it. French values: they
