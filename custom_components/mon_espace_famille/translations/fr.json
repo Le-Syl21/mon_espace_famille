@@ -59,6 +59,12 @@
       },
       "missing_booking": {
         "name": "Réservation manquante"
+      },
+      "evening_care_today": {
+        "name": "Accueil du soir aujourd'hui"
+      },
+      "away": {
+        "name": "Hors de la maison"
       }
     },
     "sensor": {
@@ -79,6 +85,9 @@
       },
       "week_other": {
         "name": "{service} cette semaine"
+      },
+      "expected_return": {
+        "name": "Retour à la maison prévu"
       }
     },
     "calendar": {

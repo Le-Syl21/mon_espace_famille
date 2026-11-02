@@ -9,6 +9,14 @@
         "default": "mdi:silverware-fork-knife",
         "state": { "off": "mdi:silverware-clean" }
       },
+      "evening_care_today": {
+        "default": "mdi:weather-sunset-down",
+        "state": { "off": "mdi:home" }
+      },
+      "away": {
+        "default": "mdi:bag-personal",
+        "state": { "off": "mdi:home" }
+      },
       "missing_booking": {
         "default": "mdi:calendar-check",
         "state": { "on": "mdi:calendar-alert" }
@@ -16,6 +24,7 @@
     },
     "sensor": {
       "next_meal": { "default": "mdi:food" },
+      "expected_return": { "default": "mdi:home-clock" },
       "week_repas": { "default": "mdi:silverware-fork-knife" },
       "week_accueil_matin": { "default": "mdi:weather-sunset-up" },
       "week_accueil_soir": { "default": "mdi:weather-sunset-down" },

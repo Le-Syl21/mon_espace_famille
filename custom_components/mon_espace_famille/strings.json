@@ -59,6 +59,12 @@
       },
       "missing_booking": {
         "name": "Booking missing"
+      },
+      "evening_care_today": {
+        "name": "Evening care today"
+      },
+      "away": {
+        "name": "Away from home"
       }
     },
     "sensor": {
@@ -79,6 +85,9 @@
       },
       "week_other": {
         "name": "{service} this week"
+      },
+      "expected_return": {
+        "name": "Expected return home"
       }
     },
     "calendar": {

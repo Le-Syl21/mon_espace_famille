@@ -1,8 +1,8 @@
-"""Sensors: the next booked meal, and the booked days of each service this week."""
+"""Sensors: next meal, expected return home, booked days of each service this week."""
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
@@ -26,6 +26,8 @@ async def async_setup_entry(
     for child in coordinator.data.children.values():
         if child.meals is not None:
             entities.append(NextMealSensor(coordinator, child))
+        if child.services:
+            entities.append(ReturnSensor(coordinator, child))
         entities += [WeekSensor(coordinator, child, s) for s in child.services.values()]
     async_add_entities(entities)
 
@@ -54,6 +56,28 @@ class NextMealSensor(ChildEntity, SensorEntity):
     def extra_state_attributes(self) -> dict[str, Any]:
         day = self._next()
         return {"dans_jours": (day - dt_util.now().date()).days if day else None}
+
+
+class ReturnSensor(ChildEntity, SensorEntity):
+    """When the child is expected home today.
+
+    The end of the evening service (or of school when there is none) plus a
+    travel margin; unknown on a day with nothing booked. It only changes with
+    the data and at midnight, so it needs no timer of its own.
+    """
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: MefCoordinator, child: Child) -> None:
+        super().__init__(coordinator, child, "expected_return", "sensor", "retour_prevu")
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.today_plan().back_at
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"service_du_soir": self.today_plan().evening_kind is not None}
 
 
 class WeekSensor(ChildEntity, SensorEntity):

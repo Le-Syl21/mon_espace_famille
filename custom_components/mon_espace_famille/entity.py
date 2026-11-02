@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
 from .const import DOMAIN
 from .coordinator import MefCoordinator
 from .model import Child
+from .schedule import NO_PLAN, DayPlan, day_plan
 
 
 def child_device_id(entry_id: str, child_id: int) -> str:
@@ -46,3 +48,10 @@ class ChildEntity(CoordinatorEntity[MefCoordinator]):
     @property
     def available(self) -> bool:
         return super().available and self.child is not None
+
+    def today_plan(self) -> DayPlan:
+        """What today's bookings say about the child being out, in local time."""
+        child = self.child
+        if child is None:
+            return NO_PLAN
+        return day_plan(child, dt_util.now().date(), dt_util.get_default_time_zone())
