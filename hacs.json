@@ -1,0 +1,6 @@
+{
+  "name": "Mon Espace Famille",
+  "content_in_root": false,
+  "homeassistant": "2025.3.0",
+  "country": ["FR"]
+}

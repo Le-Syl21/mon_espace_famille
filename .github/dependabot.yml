@@ -1,0 +1,25 @@
+version: 2
+
+# Actions are pinned to a SHA (a tag can be force-pushed, a SHA cannot);
+# Dependabot keeps those SHAs and their version comments up to date.
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      python:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+    commit-message:
+      prefix: chore
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci
