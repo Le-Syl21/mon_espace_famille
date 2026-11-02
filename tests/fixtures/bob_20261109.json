@@ -1,0 +1,125 @@
+[
+ {
+  "id": "1_1",
+  "paymentMode": "POST",
+  "label": "REPAS PERMANENT",
+  "labelService": "Régie de recettes services périscolaires Exempleville",
+  "idService": 1,
+  "weekDaysOpen": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "openDays": [
+   {
+    "date": "20261109"
+   },
+   {
+    "date": "20261110"
+   },
+   {
+    "date": "20261112"
+   },
+   {
+    "date": "20261113"
+   },
+   {
+    "date": "20261116"
+   }
+  ],
+  "amontCredit": "0.00",
+  "registrationPending": false,
+  "hidden": false,
+  "attendances": [],
+  "absences": [],
+  "validated": [
+   {
+    "date": "20261109",
+    "dteLimiteSupp": "20261106",
+    "id": 5016
+   },
+   {
+    "date": "20261110",
+    "dteLimiteSupp": "20261109",
+    "id": 5018
+   },
+   {
+    "date": "20261113",
+    "dteLimiteSupp": "20261112",
+    "id": 5020
+   },
+   {
+    "date": "20261116",
+    "dteLimiteSupp": "20261113",
+    "id": 5021
+   }
+  ],
+  "attendancesWithoutResa": [],
+  "absencesJutified": [],
+  "failing": []
+ },
+ {
+  "id": "7_7",
+  "paymentMode": "POST",
+  "label": "ACCUEIL SOIR",
+  "labelService": "Régie de recettes services périscolaires Exempleville",
+  "idService": 1,
+  "weekDaysOpen": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "openDays": [
+   {
+    "date": "20261109"
+   },
+   {
+    "date": "20261110"
+   },
+   {
+    "date": "20261112"
+   },
+   {
+    "date": "20261113"
+   },
+   {
+    "date": "20261116"
+   }
+  ],
+  "amontCredit": "0.00",
+  "registrationPending": false,
+  "hidden": false
+ },
+ {
+  "id": "8_8",
+  "paymentMode": "POST",
+  "label": "ÉTUDE",
+  "labelService": "Régie de recettes services périscolaires Exempleville",
+  "idService": 1,
+  "weekDaysOpen": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "openDays": [
+   {
+    "date": "20261109"
+   },
+   {
+    "date": "20261112"
+   },
+   {
+    "date": "20261116"
+   }
+  ],
+  "amontCredit": "0.00",
+  "registrationPending": false,
+  "hidden": false
+ }
+]

@@ -1,0 +1,39 @@
+{
+ "responsibles": [
+  {
+   "id": "responsable-1",
+   "lastName": {"value": "Martin", "pending": null},
+   "firstName": {"value": "Paul", "pending": null}
+  }
+ ],
+ "children": [
+  {
+   "id": 101,
+   "isChildren": true,
+   "lastName": {"value": "Martin", "pending": null},
+   "firstName": {"value": "Alice", "pending": null},
+   "archived": {"value": false, "pending": null}
+  },
+  {
+   "id": 102,
+   "isChildren": true,
+   "lastName": {"value": "Martin", "pending": null},
+   "firstName": {"value": "Bob", "pending": null},
+   "archived": {"value": false, "pending": null}
+  },
+  {
+   "id": 103,
+   "isChildren": true,
+   "lastName": {"value": "Martin", "pending": null},
+   "firstName": {"value": "Chloé", "pending": null},
+   "archived": {"value": false, "pending": null}
+  },
+  {
+   "id": 104,
+   "isChildren": true,
+   "lastName": {"value": "Martin", "pending": null},
+   "firstName": {"value": "Dan", "pending": null},
+   "archived": {"value": true, "pending": null}
+  }
+ ]
+}
