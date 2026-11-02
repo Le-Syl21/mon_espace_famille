@@ -1,0 +1,12 @@
+{
+  "domain": "mon_espace_famille",
+  "name": "Mon Espace Famille",
+  "codeowners": ["@Le-Syl21"],
+  "config_flow": true,
+  "documentation": "https://github.com/Le-Syl21/mon_espace_famille",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Le-Syl21/mon_espace_famille/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

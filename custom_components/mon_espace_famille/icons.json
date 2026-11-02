@@ -1,0 +1,33 @@
+{
+  "entity": {
+    "binary_sensor": {
+      "meal_today": {
+        "default": "mdi:silverware-fork-knife",
+        "state": { "off": "mdi:silverware-clean" }
+      },
+      "meal_tomorrow": {
+        "default": "mdi:silverware-fork-knife",
+        "state": { "off": "mdi:silverware-clean" }
+      },
+      "missing_booking": {
+        "default": "mdi:calendar-check",
+        "state": { "on": "mdi:calendar-alert" }
+      }
+    },
+    "sensor": {
+      "next_meal": { "default": "mdi:food" },
+      "week_repas": { "default": "mdi:silverware-fork-knife" },
+      "week_accueil_matin": { "default": "mdi:weather-sunset-up" },
+      "week_accueil_soir": { "default": "mdi:weather-sunset-down" },
+      "week_etude": { "default": "mdi:book-open-variant" },
+      "week_other": { "default": "mdi:calendar-week" }
+    },
+    "calendar": {
+      "calendar": { "default": "mdi:calendar-account" }
+    }
+  },
+  "services": {
+    "reserver": { "service": "mdi:calendar-plus" },
+    "annuler": { "service": "mdi:calendar-remove" }
+  }
+}

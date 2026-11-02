@@ -1,0 +1,29 @@
+reserver:
+  fields: &fields
+    enfant:
+      required: true
+      selector:
+        device:
+          integration: mon_espace_famille
+    service:
+      required: true
+      example: repas
+      selector:
+        select:
+          options:
+            - repas
+            - accueil_matin
+            - accueil_soir
+            - etude
+          translation_key: service
+          custom_value: true
+    dates:
+      required: true
+      example: '["2026-11-13", "2026-11-16"]'
+      selector:
+        text:
+          type: date
+          multiple: true
+
+annuler:
+  fields: *fields

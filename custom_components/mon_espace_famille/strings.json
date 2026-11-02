@@ -1,0 +1,154 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Mon Espace Famille account",
+        "description": "The email and password you use on app.monespacefamille.fr. Each child registered to a service (canteen, before- or after-school care, study hall) gets a device.",
+        "data": {
+          "email": "Email",
+          "password": "Password"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Log in again",
+        "description": "Mon Espace Famille no longer accepts the password of {email}.",
+        "data": {
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Wrong email or password.",
+      "cannot_connect": "Mon Espace Famille cannot be reached, try again later."
+    },
+    "abort": {
+      "already_configured": "This account is already set up.",
+      "reauth_successful": "Logged in again."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Weeks read",
+        "data": {
+          "semaines": "Weeks ahead"
+        },
+        "data_description": {
+          "semaines": "Weeks read after the current one, every 30 minutes. \"Booking missing\" needs at least 1."
+        }
+      }
+    }
+  },
+  "selector": {
+    "service": {
+      "options": {
+        "repas": "Canteen",
+        "accueil_matin": "Morning care",
+        "accueil_soir": "Evening care",
+        "etude": "Study hall"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "meal_today": {
+        "name": "Canteen today"
+      },
+      "meal_tomorrow": {
+        "name": "Canteen tomorrow"
+      },
+      "missing_booking": {
+        "name": "Booking missing"
+      }
+    },
+    "sensor": {
+      "next_meal": {
+        "name": "Next meal"
+      },
+      "week_repas": {
+        "name": "Meals this week"
+      },
+      "week_accueil_matin": {
+        "name": "Morning care this week"
+      },
+      "week_accueil_soir": {
+        "name": "Evening care this week"
+      },
+      "week_etude": {
+        "name": "Study hall this week"
+      },
+      "week_other": {
+        "name": "{service} this week"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Périscolaire"
+      }
+    }
+  },
+  "services": {
+    "reserver": {
+      "name": "Book",
+      "description": "Books days of a service for a child, then checks Mon Espace Famille shows them.",
+      "fields": {
+        "enfant": {
+          "name": "Child",
+          "description": "The child's device (an entity of the child works too)."
+        },
+        "service": {
+          "name": "Service",
+          "description": "repas, accueil_matin, accueil_soir or etude; or the service id Mon Espace Famille uses, such as 1_1."
+        },
+        "dates": {
+          "name": "Dates",
+          "description": "The days, YYYY-MM-DD. Days already booked are skipped."
+        }
+      }
+    },
+    "annuler": {
+      "name": "Cancel",
+      "description": "Cancels booked days of a service for a child, before the cancellation deadline, then checks Mon Espace Famille no longer shows them.",
+      "fields": {
+        "enfant": {
+          "name": "Child",
+          "description": "The child's device (an entity of the child works too)."
+        },
+        "service": {
+          "name": "Service",
+          "description": "repas, accueil_matin, accueil_soir or etude; or the service id Mon Espace Famille uses, such as 1_1."
+        },
+        "dates": {
+          "name": "Dates",
+          "description": "The booked days to cancel, YYYY-MM-DD."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_child": {
+      "message": "{child} is not a child of a Mon Espace Famille account."
+    },
+    "not_registered": {
+      "message": "{child} is not registered to {service}."
+    },
+    "not_open": {
+      "message": "{service} cannot be booked on {dates}: closed that day, or past the booking deadline."
+    },
+    "not_booked": {
+      "message": "{service} is not booked on {dates}."
+    },
+    "too_late": {
+      "message": "{service} on {dates} can no longer be cancelled: the deadline has passed."
+    },
+    "not_confirmed": {
+      "message": "Mon Espace Famille took the request but does not show it yet for {dates}; check the app before trying again."
+    },
+    "auth_failed": {
+      "message": "Mon Espace Famille refused the login; log in again from the integration."
+    },
+    "api_error": {
+      "message": "Mon Espace Famille did not answer as expected: {error}"
+    }
+  }
+}

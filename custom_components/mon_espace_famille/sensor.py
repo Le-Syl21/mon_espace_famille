@@ -1,0 +1,85 @@
+"""Sensors: the next booked meal, and the booked days of each service this week."""
+
+from __future__ import annotations
+
+from datetime import date, timedelta
+from typing import Any
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.util import dt as dt_util
+from homeassistant.util import slugify
+
+from .coordinator import MefConfigEntry, MefCoordinator
+from .entity import ChildEntity
+from .model import Child, Service, monday_of
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: MefConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    coordinator = entry.runtime_data
+    entities: list[SensorEntity] = []
+    for child in coordinator.data.children.values():
+        if child.meals is not None:
+            entities.append(NextMealSensor(coordinator, child))
+        entities += [WeekSensor(coordinator, child, s) for s in child.services.values()]
+    async_add_entities(entities)
+
+
+class NextMealSensor(ChildEntity, SensorEntity):
+    """The next day, from today on, with a meal booked."""
+
+    _attr_device_class = SensorDeviceClass.DATE
+
+    def __init__(self, coordinator: MefCoordinator, child: Child) -> None:
+        super().__init__(coordinator, child, "next_meal", "sensor", "prochain_repas")
+
+    def _next(self) -> date | None:
+        child = self.child
+        meals = child.meals if child else None
+        if meals is None:
+            return None
+        days = meals.reserved_days(dt_util.now().date(), date.max)
+        return days[0] if days else None
+
+    @property
+    def native_value(self) -> date | None:
+        return self._next()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        day = self._next()
+        return {"dans_jours": (day - dt_util.now().date()).days if day else None}
+
+
+class WeekSensor(ChildEntity, SensorEntity):
+    """How many days of this week the child has a place for in a service."""
+
+    def __init__(self, coordinator: MefCoordinator, child: Child, service: Service) -> None:
+        kind = service.kind or "other"
+        suffix = service.kind or slugify(service.label)
+        super().__init__(coordinator, child, f"week_{kind}", "sensor", f"{suffix}_cette_semaine")
+        # Two services of one kind (or unknown ones) need their own ids.
+        self._attr_unique_id = f"{coordinator.config_entry.entry_id}_{child.id}_{service.id}_week"
+        self._attr_translation_placeholders = {"service": service.label.capitalize()}
+        self.service_id = service.id
+
+    def _days(self) -> list[date]:
+        child = self.child
+        service = child.services.get(self.service_id) if child else None
+        if service is None:
+            return []
+        first = monday_of(dt_util.now().date())
+        return service.reserved_days(first, first + timedelta(days=7))
+
+    @property
+    def native_value(self) -> int:
+        return len(self._days())
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        return {"jours": [d.isoformat() for d in self._days()]}

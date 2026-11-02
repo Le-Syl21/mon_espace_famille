@@ -1,0 +1,154 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Compte Mon Espace Famille",
+        "description": "L'e-mail et le mot de passe utilisés sur app.monespacefamille.fr. Chaque enfant inscrit à un service (cantine, accueil du matin ou du soir, étude) devient un appareil.",
+        "data": {
+          "email": "E-mail",
+          "password": "Mot de passe"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Se reconnecter",
+        "description": "Mon Espace Famille n'accepte plus le mot de passe de {email}.",
+        "data": {
+          "password": "Mot de passe"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "E-mail ou mot de passe incorrect.",
+      "cannot_connect": "Mon Espace Famille ne répond pas, réessayez plus tard."
+    },
+    "abort": {
+      "already_configured": "Ce compte est déjà configuré.",
+      "reauth_successful": "Reconnexion réussie."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Semaines lues",
+        "data": {
+          "semaines": "Semaines à venir"
+        },
+        "data_description": {
+          "semaines": "Semaines lues après la semaine en cours, toutes les 30 minutes. « Réservation manquante » en demande au moins 1."
+        }
+      }
+    }
+  },
+  "selector": {
+    "service": {
+      "options": {
+        "repas": "Cantine",
+        "accueil_matin": "Accueil du matin",
+        "accueil_soir": "Accueil du soir",
+        "etude": "Étude"
+      }
+    }
+  },
+  "entity": {
+    "binary_sensor": {
+      "meal_today": {
+        "name": "Cantine aujourd'hui"
+      },
+      "meal_tomorrow": {
+        "name": "Cantine demain"
+      },
+      "missing_booking": {
+        "name": "Réservation manquante"
+      }
+    },
+    "sensor": {
+      "next_meal": {
+        "name": "Prochain repas"
+      },
+      "week_repas": {
+        "name": "Repas cette semaine"
+      },
+      "week_accueil_matin": {
+        "name": "Accueil du matin cette semaine"
+      },
+      "week_accueil_soir": {
+        "name": "Accueil du soir cette semaine"
+      },
+      "week_etude": {
+        "name": "Étude cette semaine"
+      },
+      "week_other": {
+        "name": "{service} cette semaine"
+      }
+    },
+    "calendar": {
+      "calendar": {
+        "name": "Périscolaire"
+      }
+    }
+  },
+  "services": {
+    "reserver": {
+      "name": "Réserver",
+      "description": "Réserve des jours d'un service pour un enfant, puis vérifie que Mon Espace Famille les affiche.",
+      "fields": {
+        "enfant": {
+          "name": "Enfant",
+          "description": "L'appareil de l'enfant (une de ses entités convient aussi)."
+        },
+        "service": {
+          "name": "Service",
+          "description": "repas, accueil_matin, accueil_soir ou etude ; ou l'identifiant du service chez Mon Espace Famille, par exemple 1_1."
+        },
+        "dates": {
+          "name": "Dates",
+          "description": "Les jours, AAAA-MM-JJ. Les jours déjà réservés sont ignorés."
+        }
+      }
+    },
+    "annuler": {
+      "name": "Annuler",
+      "description": "Annule des jours réservés d'un service pour un enfant, avant la date limite d'annulation, puis vérifie que Mon Espace Famille ne les affiche plus.",
+      "fields": {
+        "enfant": {
+          "name": "Enfant",
+          "description": "L'appareil de l'enfant (une de ses entités convient aussi)."
+        },
+        "service": {
+          "name": "Service",
+          "description": "repas, accueil_matin, accueil_soir ou etude ; ou l'identifiant du service chez Mon Espace Famille, par exemple 1_1."
+        },
+        "dates": {
+          "name": "Dates",
+          "description": "Les jours réservés à annuler, AAAA-MM-JJ."
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "unknown_child": {
+      "message": "{child} n'est pas un enfant d'un compte Mon Espace Famille."
+    },
+    "not_registered": {
+      "message": "{child} n'est pas inscrit(e) au service {service}."
+    },
+    "not_open": {
+      "message": "{service} ne peut pas être réservé le {dates} : service fermé ce jour-là ou date limite de réservation dépassée."
+    },
+    "not_booked": {
+      "message": "{service} n'est pas réservé le {dates}."
+    },
+    "too_late": {
+      "message": "{service} du {dates} ne peut plus être annulé : la date limite est dépassée."
+    },
+    "not_confirmed": {
+      "message": "Mon Espace Famille a pris la demande mais ne l'affiche pas encore pour le {dates} ; vérifiez dans l'application avant de recommencer."
+    },
+    "auth_failed": {
+      "message": "Mon Espace Famille refuse la connexion ; reconnectez-vous depuis l'intégration."
+    },
+    "api_error": {
+      "message": "Mon Espace Famille n'a pas répondu comme prévu : {error}"
+    }
+  }
+}
