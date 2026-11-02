@@ -118,7 +118,7 @@ Les jours sans réservation, `retour_prevu` est inconnu : la condition est fauss
 
 ### 💬 Communauté & support
 
-Des questions, un bug à signaler ou juste envie d'en discuter ? Rejoignez le Discord, section *Home Assistant* :
+Des questions, un bug à signaler ou juste envie d'en discuter ? Rejoignez le Discord, section *Home Assistant*, salon [#mon-espace-famille](https://discord.com/channels/1529873522652872744/1566916065991331943) (utile pour dire si votre commune fonctionne) :
 
 [![Discord](https://img.shields.io/badge/Discord-Le--Syl21%20Tools-5865F2?logo=discord&logoColor=white)](https://discord.gg/T37DYHmt2j)
 
@@ -195,7 +195,7 @@ On days with no booking `retour_prevu` is unknown, the condition is false and th
 
 ### 💬 Community & support
 
-Questions, bug reports, or just want to chat? Join the Discord, *Home Assistant* section:
+Questions, bug reports, or just want to chat? Join the Discord, *Home Assistant* section, channel [#mon-espace-famille](https://discord.com/channels/1529873522652872744/1566916065991331943) (a good place to say whether your commune works):
 
 [![Discord](https://img.shields.io/badge/Discord-Le--Syl21%20Tools-5865F2?logo=discord&logoColor=white)](https://discord.gg/T37DYHmt2j)
 
