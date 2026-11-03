@@ -229,7 +229,11 @@ const esc = (s) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
 const STYLE = `
-:host { display: block; }
+:host { display: block;
+  /* The red of a not-booked tile: the theme's error colour, muted towards
+     the secondary text colour so it does not glare on a dark theme. A theme
+     can set --mef-off-color to take it over. */
+  --mef-off: var(--mef-off-color, color-mix(in srgb, var(--error-color, #c62828) 60%, var(--secondary-text-color, #888) 40%)); }
 ha-card { padding: 12px 8px 8px; overflow: hidden; }
 * { box-sizing: border-box; }
 button { font: inherit; color: inherit; }
@@ -257,7 +261,7 @@ ha-card { container-type: inline-size; }
 .pill { position: relative; width: var(--size); height: var(--size); padding: 0; border-radius: 10px; border: 2px solid var(--success-color, #2e7d32); background: var(--success-color, #2e7d32); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .pill svg.ico { width: calc(var(--size) * .72); height: calc(var(--size) * .72); fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .pill svg.ico.filled { fill: currentColor; stroke-width: 1; }
-.pill.off { background: color-mix(in srgb, var(--error-color, #c62828) 14%, var(--card-background-color, #fff)); border-color: var(--error-color, #c62828); color: var(--error-color, #c62828); }
+.pill.off { background: color-mix(in srgb, var(--mef-off) 11%, var(--card-background-color, #fff)); border-color: var(--mef-off); color: var(--mef-off); }
 .pill.locked { cursor: not-allowed; opacity: .55; filter: saturate(.55); }
 .chip { position: absolute; width: calc(var(--size) * .4); height: calc(var(--size) * .4); border-radius: 50%; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color); color: var(--primary-text-color); display: inline-flex; align-items: center; justify-content: center; }
 .chip svg { width: 70%; height: 70%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -280,7 +284,7 @@ ha-card { container-type: inline-size; }
 .legend .pill.draft { outline-width: 2px; outline-offset: 1px; }
 .legend + .legend { border-top: 0; margin-top: 0; padding-top: 4px; }
 .mini { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--success-color, #2e7d32); border: 2px solid var(--success-color, #2e7d32); color: #fff; vertical-align: -6px; margin-right: 4px; }
-.mini.off { background: color-mix(in srgb, var(--error-color, #c62828) 14%, var(--card-background-color, #fff)); border-color: var(--error-color, #c62828); color: var(--error-color, #c62828); }
+.mini.off { background: color-mix(in srgb, var(--mef-off) 11%, var(--card-background-color, #fff)); border-color: var(--mef-off); color: var(--mef-off); }
 .mini.neutral { background: var(--secondary-text-color); border-color: var(--secondary-text-color); color: var(--card-background-color, #fff); }
 .mini svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .mini svg.filled { fill: currentColor; stroke-width: 1; }
