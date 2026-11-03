@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import os
 from datetime import time, timedelta
 from typing import Final
 
 DOMAIN: Final = "mon_espace_famille"
 
-API_BASE: Final = "https://app.monespacefamille.fr/api/v2/"
+# Development only: MEF_API_BASE points the client at a stand-in portal (a base
+# URL ending with "/"). Unset in production, which uses the real portal.
+API_BASE: Final = os.environ.get("MEF_API_BASE") or "https://app.monespacefamille.fr/api/v2/"
 # The web app's public client id (it ships in its JavaScript bundle).
 CLIENT_ID: Final = "963568d5-b3ca-4d91-8a73-9eebda59822b"
 USER_AGENT: Final = "mon_espace_famille (+https://github.com/Le-Syl21/mon_espace_famille)"
@@ -105,3 +108,11 @@ ATTR_SERVICE: Final = "service"
 ATTR_DATES: Final = "dates"
 SERVICE_BOOK: Final = "reserver"
 SERVICE_CANCEL: Final = "annuler"
+
+# Order of the services in the planning card, and the planning's cache.
+PLANNING_ORDER: Final = (KIND_ACCUEIL_MATIN, KIND_REPAS, KIND_ACCUEIL_SOIR, KIND_ETUDE)
+PLANNING_CACHE_SECONDS: Final = 15.0
+
+# The planning card, served from the integration.
+CARD_FILE: Final = "mon-espace-famille-planning-card.js"
+CARD_URL: Final = f"/{DOMAIN}/{CARD_FILE}"

@@ -18,7 +18,7 @@ from pytest_homeassistant_custom_component.test_util.aiohttp import (
     AiohttpClientMockResponse,
 )
 
-from custom_components.mon_espace_famille import services
+from custom_components.mon_espace_famille import services, websocket
 from custom_components.mon_espace_famille.const import API_BASE, DOMAIN
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -67,6 +67,10 @@ class FakeMef:
         self.unauthorized = 0  # answer 401 to that many next calls
         self.refresh_works = True
         self.server_error = False
+        self.reservations_status = 200
+        self.pricing: list = []  # post-paid: the portal announces nothing
+        self.calculate: object = ""
+        self.checks: list[tuple[str, str]] = []  # (path, body) of the read-only checks
         self.carts: list[dict] = []
         self.bodies: list[str] = []
         self._next_id = 9001
@@ -131,6 +135,8 @@ class FakeMef:
         )
 
     async def _reservations(self, method, url, data):
+        if self.reservations_status != 200:
+            return self._resp(method, url, self.reservations_status)
         self.bodies.append(data)
         pairs = parse_qsl(data, keep_blank_values=True)
         assert [k for k, _ in pairs] == ["cart"]
@@ -141,6 +147,11 @@ class FakeMef:
         if self.apply_carts:
             self._apply(item)
         return self._resp(method, url, json_body={"status": "queued"})
+
+    async def _check(self, method, url, data):
+        self.checks.append((url.path.rsplit("/", 1)[1], data))
+        body = self.pricing if url.path.endswith("pricing") else self.calculate
+        return self._resp(method, url, json_body=body)
 
     def _service(self, child: int, sid: str, day: date) -> dict:
         monday = day - timedelta(days=day.weekday())
@@ -173,6 +184,8 @@ class FakeMef:
         mock.get(API_BASE + "home/members", side_effect=self._members)
         mock.get(API_BASE + "me/entity/current", json={"type": "town", "name": "Exempleville"})
         mock.get(re.compile(r"/family/children/\d+/servicesreservations"), side_effect=self._week)
+        mock.post(API_BASE + "family/children/reservations/pricing", side_effect=self._check)
+        mock.post(API_BASE + "family/children/reservations/calculate", side_effect=self._check)
         mock.post(API_BASE + "family/children/reservations", side_effect=self._reservations)
 
 
@@ -184,6 +197,7 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 @pytest.fixture(autouse=True)
 def no_verify_delay(monkeypatch):
     monkeypatch.setattr(services, "VERIFY_DELAY", 0)
+    monkeypatch.setattr(websocket, "VERIFY_DELAY", 0)
 
 
 @pytest.fixture

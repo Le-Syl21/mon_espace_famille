@@ -32,7 +32,7 @@ from .const import (
     VERIFY_ATTEMPTS,
     VERIFY_DELAY,
 )
-from .coordinator import MefConfigEntry, MefCoordinator
+from .coordinator import MefConfigEntry, MefCoordinator, action_lock
 from .model import Child, Service, monday_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -249,7 +249,7 @@ async def _cancel(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
 
 
 def async_setup_services(hass: HomeAssistant) -> None:
-    lock = asyncio.Lock()
+    lock = action_lock(hass)
 
     async def book(call: ServiceCall) -> ServiceResponse:
         async with lock:

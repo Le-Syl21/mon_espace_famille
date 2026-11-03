@@ -67,6 +67,8 @@ class Service:
     service_id: int  # the cart's serviceId: the number before "_" in the id
     label: str
     kind: str | None
+    # "POST": billed afterwards, so the portal has no amount to show up front.
+    payment_mode: str | None = None
     # Days that can be booked (holidays and closed days are not listed), and
     # whether they are already past the booking deadline.
     open_days: dict[date, bool] = field(default_factory=dict)
@@ -103,6 +105,7 @@ class Child:
                 service_id=s.service_id,
                 label=s.label,
                 kind=s.kind,
+                payment_mode=s.payment_mode,
                 open_days={d: v for d, v in s.open_days.items() if first <= d < end},
                 days={d: v for d, v in s.days.items() if first <= d < end},
             )
@@ -152,7 +155,11 @@ def merge_week(child: Child, monday: date, services: list[dict]) -> None:
             except ValueError:
                 service_id = 0
             service = child.services[sid] = Service(
-                id=sid, service_id=service_id, label=label, kind=service_kind(label)
+                id=sid,
+                service_id=service_id,
+                label=label,
+                kind=service_kind(label),
+                payment_mode=raw.get("paymentMode"),
             )
         for item in raw.get("openDays") or []:
             day = parse_api_date((item or {}).get("date"))

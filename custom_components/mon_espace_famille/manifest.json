@@ -1,7 +1,13 @@
 {
   "domain": "mon_espace_famille",
   "name": "Mon Espace Famille",
-  "codeowners": ["@Le-Syl21"],
+  "after_dependencies": [
+    "frontend",
+    "http"
+  ],
+  "codeowners": [
+    "@Le-Syl21"
+  ],
   "config_flow": true,
   "documentation": "https://github.com/Le-Syl21/mon_espace_famille",
   "integration_type": "service",

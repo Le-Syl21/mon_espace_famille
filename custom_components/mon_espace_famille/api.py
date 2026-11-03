@@ -203,3 +203,33 @@ class MefClient:
         )
         if not isinstance(body, dict) or body.get("status") != "queued":
             raise MefError(f"reservations: unexpected answer {body!r}")
+
+    async def pricing(self, entries: list[dict], prestas: list[dict]) -> list:
+        """What the portal would charge now for a cart; nothing is booked.
+
+        The web app asks this before sending a cart. A post-paid commune
+        answers an empty list: there is no amount to announce.
+        """
+        body = await self.request(
+            "POST",
+            "family/children/reservations/pricing",
+            form=encode_form({"cart": [entries], "prestas": [prestas]}),
+        )
+        return body if isinstance(body, list) else []
+
+    async def calculate(self, entries: list[dict], prestas: list[dict]) -> dict:
+        """The portal's check of a cart, without sending it.
+
+        Answers an empty string when every line is fine, else an object whose
+        `panierLigneErreur` lists the refused lines ({reservations, annulations}).
+        """
+        body = await self.request(
+            "POST",
+            "family/children/reservations/calculate",
+            form=encode_form({"cart": [entries], "prestas": [prestas]}),
+        )
+        return body if isinstance(body, dict) else {}
+
+    async def services_raw(self, child_id: int, monday: date) -> list[dict]:
+        """The week's answer as the portal sent it (the pricing wants it back)."""
+        return await self.services_reservations(child_id, monday)
