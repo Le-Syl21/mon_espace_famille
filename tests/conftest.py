@@ -70,6 +70,7 @@ class FakeMef:
         self.reservations_status = 200
         self.pricing: list = []  # post-paid: the portal announces nothing
         self.calculate: object = ""
+        self.rates: dict | None = {1: 5.2, 6: 4.28, 7: 5.92, 8: 0, 3: 1.99}
         self.checks: list[tuple[str, str]] = []  # (path, body) of the read-only checks
         self.carts: list[dict] = []
         self.bodies: list[str] = []
@@ -148,6 +149,15 @@ class FakeMef:
             self._apply(item)
         return self._resp(method, url, json_body={"status": "queued"})
 
+    async def _products(self, method, url, data):
+        if self.rates is None:
+            return self._resp(method, url, 404)
+        products = [
+            {"id": pid, "name": f"P{pid}", "services": [{"name": "X", "rate": rate}]}
+            for pid, rate in self.rates.items()
+        ]
+        return self._resp(method, url, json_body={"products": products})
+
     async def _check(self, method, url, data):
         self.checks.append((url.path.rsplit("/", 1)[1], data))
         body = self.pricing if url.path.endswith("pricing") else self.calculate
@@ -184,6 +194,7 @@ class FakeMef:
         mock.get(API_BASE + "home/members", side_effect=self._members)
         mock.get(API_BASE + "me/entity/current", json={"type": "town", "name": "Exempleville"})
         mock.get(re.compile(r"/family/children/\d+/servicesreservations"), side_effect=self._week)
+        mock.get(re.compile(r"/family/children/\d+/products/1"), side_effect=self._products)
         mock.post(API_BASE + "family/children/reservations/pricing", side_effect=self._check)
         mock.post(API_BASE + "family/children/reservations/calculate", side_effect=self._check)
         mock.post(API_BASE + "family/children/reservations", side_effect=self._reservations)

@@ -11,9 +11,12 @@ from typing import Any
 
 from .const import (
     CANCELLABLE_STATUSES,
+    KIND_ACCUEIL_SOIR,
+    KIND_ETUDE,
     KIND_HOURS,
     KIND_NAMES,
     PLANNING_ORDER,
+    REASON_NEEDS_EVENING,
     RESERVED_STATUSES,
     STATUS_ABSENT,
     STATUS_ABSENT_JUSTIFIED,
@@ -25,7 +28,7 @@ from .model import Child, Service, monday_of
 
 # A day counts as booked for the card in these states; the last two are days
 # the child was booked for and missed.
-_BOOKED_STATES = RESERVED_STATUSES | {STATUS_ABSENT, STATUS_ABSENT_JUSTIFIED}
+BOOKED_STATES = RESERVED_STATUSES | {STATUS_ABSENT, STATUS_ABSENT_JUSTIFIED}
 # Days that have an answer already on the way: not touchable.
 _BUSY_STATES = frozenset({STATUS_CANCEL_PENDING, STATUS_FAILING})
 
@@ -47,38 +50,47 @@ def shown_kinds(child: Child) -> list[str]:
 class Calendar:
     """What the window tells about the school's rhythm."""
 
-    # Weekdays on which each kind of service has ever been seen open.
+    # Weekdays on which the portal has ever listed each kind of service in the
+    # data read (the window and the week shown): what the server shows, nothing
+    # assumed. It tells a locked day from a day nothing is ever offered on.
     weekdays: dict[str, frozenset[int]]
     # First day that can still be booked: earlier days are past or too late.
     first_open: date | None
 
     @classmethod
     def of(cls, children: list[Child], today: date) -> Calendar:
-        days: dict[str, set[int]] = {}
         first: date | None = None
+        days: dict[str, set[int]] = {}
         for child in children:
             for service in child.services.values():
-                if service.kind is None:
-                    continue
-                seen = days.setdefault(service.kind, set())
-                for day in list(service.open_days) + list(service.days):
-                    seen.add(day.weekday())
+                for day in (*service.open_days, *service.days):
+                    if service.kind:
+                        days.setdefault(service.kind, set()).add(day.weekday())
                 for day in service.open_days:
                     if day >= today and (first is None or day < first):
                         first = day
         return cls({k: frozenset(v) for k, v in days.items()}, first)
 
 
-def cell(
-    service: Service, day: date, today: date, cal: Calendar, week_active: bool
-) -> dict[str, Any]:
+def _offered_that_week(service: Service, day: date) -> bool:
+    """Whether the portal lists the service on any day of that day's week.
+
+    Nothing is assumed about weekdays: a service the week's data does not
+    mention (no open day, no booking) is simply not there that week.
+    """
+    monday = monday_of(day)
+    end = monday + timedelta(days=7)
+    return any(monday <= d < end for d in (*service.open_days, *service.days))
+
+
+def cell(service: Service, day: date, today: date, cal: Calendar) -> dict[str, Any]:
     """One child, one service, one day: can it be touched and what is it now?"""
     entry = service.days.get(day)
     status = entry.status if entry else None
     out: dict[str, Any] = {
         "registered": True,
         "open": service.bookable(day),
-        "booked": status in _BOOKED_STATES,
+        "booked": status in BOOKED_STATES,
         "locked": True,
         "deadline": entry.deadline.isoformat() if entry and entry.deadline else None,
         "reason": "",
@@ -100,26 +112,34 @@ def cell(
     if out["open"] and day >= today:
         out["locked"] = False
         return out
-    seen = service.kind in cal.weekdays and day.weekday() in cal.weekdays[service.kind]
     bound = cal.first_open or today
-    if seen and week_active and day < bound:
+    seen = service.kind in cal.weekdays and day.weekday() in cal.weekdays[service.kind]
+    if seen and _offered_that_week(service, day) and day < bound:
         out["reason"] = "past" if day < today else "deadline"
     else:
         out["reason"] = "not_offered"
     return out
 
 
+def _apply_study_rule(child: dict) -> None:
+    """Lock what the study-hall rule forbids: it comes with the evening care."""
+    if KIND_ETUDE not in child["services"] or KIND_ACCUEIL_SOIR not in child["services"]:
+        return
+    for row in child["cells"].values():
+        study, evening = row[KIND_ETUDE], row[KIND_ACCUEIL_SOIR]
+        if study["reason"] == "not_offered":
+            continue
+        if not study["booked"] and not study["locked"] and not evening["booked"]:
+            if evening["locked"]:  # no evening care to attach it to, and none can be booked
+                study["locked"], study["reason"] = True, REASON_NEEDS_EVENING
+        elif study["booked"] and study["locked"] and evening["booked"] and not evening["locked"]:
+            evening["locked"], evening["reason"] = True, "has_study"
+
+
 def build_week(
     week: dict[int, Child], names: dict[int, str], monday: date, today: date, cal: Calendar
 ) -> dict[str, Any]:
     """The card's data for the week of `monday`; `week` holds only that week's days."""
-    end = monday + timedelta(days=7)
-    week_active = any(
-        monday <= d < end
-        for child in week.values()
-        for s in child.services.values()
-        for d in list(s.open_days) + list(s.days)
-    )
     children = []
     visible: set[date] = set()
     for child_id, child in week.items():
@@ -131,7 +151,7 @@ def build_week(
             day = monday + timedelta(days=n)
             row = {}
             for kind in kinds:
-                c = cell(service_of(child, kind), day, today, cal, week_active)  # type: ignore[arg-type]
+                c = cell(service_of(child, kind), day, today, cal)  # type: ignore[arg-type]
                 row[kind] = c
                 if c["reason"] != "not_offered":
                     visible.add(day)
@@ -144,6 +164,8 @@ def build_week(
                 "cells": cells,
             }
         )
+    for c in children:
+        _apply_study_rule(c)
     days = sorted(visible)
     for c in children:
         c["cells"] = {d.isoformat(): c["cells"][d.isoformat()] for d in days}
@@ -201,21 +223,51 @@ def check(
         if service is None:
             refused.append(base_info | {"reason": "not_registered"})
             continue
-        # The week is checked on its own days only: nothing else is known.
-        monday = monday_of(ch.day)
-        active = any(
-            monday <= d < monday + timedelta(days=7)
-            for s in child.services.values()
-            for d in list(s.open_days) + list(s.days)
-        )
-        now = cell(service, ch.day, today, cal, active)
+        now = cell(service, ch.day, today, cal)
         seen = base.get(ch.key())
         if seen is not None and seen != now["booked"]:
             conflicts.append(base_info | {"expected": seen, "actual": now["booked"]})
             continue
         if now["locked"] or (ch.action == BOOK) == now["booked"]:
             refused.append(base_info | {"reason": now["reason"] or "unchanged"})
+    bad = {(r["child"], r["service"], r["date"]) for r in conflicts + refused}
+    refused += _study_rule(changes, week_of, bad)
     return conflicts, refused
+
+
+def _booked_now(child: Child | None, kind: str, day: date) -> bool | None:
+    service = service_of(child, kind) if child else None
+    if service is None:
+        return None
+    entry = service.days.get(day)
+    return entry is not None and entry.status in BOOKED_STATES
+
+
+def _study_rule(changes, week_of, bad) -> list[dict]:
+    """Refuse changes that would leave a study hall without its evening care."""
+    out = []
+    ok = [c for c in changes if (c.child, c.service, c.day.isoformat()) not in bad]
+    for child_id, day in {
+        (c.child, c.day) for c in ok if c.service in (KIND_ETUDE, KIND_ACCUEIL_SOIR)
+    }:
+        child = week_of.get((child_id, monday_of(day)))
+        study = _booked_now(child, KIND_ETUDE, day)
+        evening = _booked_now(child, KIND_ACCUEIL_SOIR, day)
+        if study is None or evening is None:
+            continue
+        mine = {c.service: c for c in ok if c.child == child_id and c.day == day}
+        if KIND_ETUDE in mine:
+            study = mine[KIND_ETUDE].action == BOOK
+        if KIND_ACCUEIL_SOIR in mine:
+            evening = mine[KIND_ACCUEIL_SOIR].action == BOOK
+        if study and not evening:
+            for kind in (KIND_ETUDE, KIND_ACCUEIL_SOIR):
+                if kind in mine:
+                    out.append(
+                        {"child": child_id, "service": kind, "date": day.isoformat()}
+                        | {"reason": REASON_NEEDS_EVENING}
+                    )
+    return out
 
 
 def carts(changes: list[Change], week_of: dict[tuple[int, date], Child]) -> list[dict]:
@@ -273,5 +325,5 @@ def is_done(change: Change, week_of: dict[tuple[int, date], Child]) -> bool:
     if service is None:
         return False
     entry = service.days.get(change.day)
-    booked = entry is not None and entry.status in _BOOKED_STATES
+    booked = entry is not None and entry.status in BOOKED_STATES
     return booked if change.action == BOOK else not booked

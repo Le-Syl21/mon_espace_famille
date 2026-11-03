@@ -22,6 +22,8 @@ from .const import (
     ATTR_DATES,
     ATTR_SERVICE,
     DOMAIN,
+    KIND_ACCUEIL_SOIR,
+    KIND_ETUDE,
     KIND_NAMES,
     KINDS,
     SERVICE_BOOK,
@@ -34,6 +36,7 @@ from .const import (
 )
 from .coordinator import MefConfigEntry, MefCoordinator, action_lock
 from .model import Child, Service, monday_of
+from .planning import service_of
 
 _LOGGER = logging.getLogger(__name__)
 # A booking shows up as validated (or pending, where the commune validates by
@@ -184,6 +187,15 @@ async def _book(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
         )
     if not todo:
         return _response(call, [])
+    # The study hall comes with the evening care of the same day.
+    evening = service_of(child, KIND_ACCUEIL_SOIR) if service.kind == KIND_ETUDE else None
+    missing = [d for d in todo if evening and not (d in evening.days and evening.days[d].reserved)]
+    if missing:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="needs_evening",
+            translation_placeholders={"dates": _fr_list(missing)},
+        )
     await _send(
         coordinator,
         {
@@ -222,6 +234,14 @@ async def _cancel(hass: HomeAssistant, call: ServiceCall) -> ServiceResponse:
             translation_domain=DOMAIN,
             translation_key="too_late",
             translation_placeholders={"service": service.label, "dates": _fr_list(late)},
+        )
+    study = service_of(child, KIND_ETUDE) if service.kind == KIND_ACCUEIL_SOIR else None
+    kept = [d for d in days if study and d in study.days and study.days[d].reserved]
+    if kept:
+        raise ServiceValidationError(
+            translation_domain=DOMAIN,
+            translation_key="has_study",
+            translation_placeholders={"dates": _fr_list(kept)},
         )
     await _send(
         coordinator,

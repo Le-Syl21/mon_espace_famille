@@ -17,7 +17,7 @@ Vous ajoutez votre compte Mon Espace Famille (e-mail et mot de passe de l'applic
 
 | Entité | Quoi | Exemple |
 |---|---|---|
-| `calendar.alice_periscolaire` | Un événement par jour réservé et par service, aux heures du service ; la description donne la date limite d'annulation, et pour les jours passés, présent ou absent | Cantine 11 h 30 – 13 h 30, « Réservé. Annulable jusqu'au 12/11/2026 inclus. » |
+| `calendar.alice_periscolaire` | Un événement par jour réservé et par service, aux heures du service ; la description donne la date limite d'annulation, et pour les jours passés, présent ou absent | Cantine 11 h 30 – 13 h 20, « Réservé. Annulable jusqu'au 12/11/2026 inclus. » |
 | `binary_sensor.alice_cantine_aujourd_hui` | Allumé si un repas est réservé aujourd'hui ; attributs `statut`, `annulable_jusqu_au` | Allumé |
 | `binary_sensor.alice_cantine_demain` | La même chose pour demain | Éteint |
 | `binary_sensor.alice_reservation_manquante` | Allumé si la semaine prochaine a un jour où la cantine est ouverte sans repas réservé ; attribut `jours` | Allumé, `["2026-11-12"]` |
@@ -29,7 +29,7 @@ Vous ajoutez votre compte Mon Espace Famille (e-mail et mot de passe de l'applic
 
 Les identifiants d'entités sont en français quelle que soit la langue de Home Assistant, pour pouvoir partager les automatisations ; les noms affichés sont traduits.
 
-Horaires du calendrier : accueil du matin 7 h – 8 h 30, cantine 11 h 30 – 13 h 30, étude et accueil du soir 16 h 30 – 18 h 45. Un service que l'intégration ne reconnaît pas devient un événement sur la journée.
+Horaires du calendrier : accueil du matin 7 h – 8 h 20, cantine 11 h 30 – 13 h 20, accueil du soir 16 h 30 – 18 h 45, étude 17 h – 18 h 30 (le périscolaire confie les enfants à l'école à 8 h 20 et 13 h 20). Un jour d'étude, `retour_prevu` reste la fin de l'accueil du soir (18 h 45), qui est réservé avec l'étude. Un service que l'intégration ne reconnaît pas devient un événement sur la journée.
 
 Les données sont relues toutes les 30 minutes : la semaine en cours et les 3 suivantes (*Configurer* change ce nombre).
 
@@ -115,7 +115,11 @@ Les flèches ← → changent de semaine (passé comme futur, lues sur le portai
 
 **Modifier.** Toucher une pastille modifiable change un *brouillon* : rien n'est envoyé. Les cases modifiées sont mises en évidence et un pied de carte indique « n modification(s) » avec *Annuler les modifications* et *Valider*. Le brouillon survit au changement de semaine (on peut préparer plusieurs semaines puis valider d'un coup) ; il est perdu si l'on recharge la page.
 
-**Valider.** *Valider* ouvre une fenêtre de confirmation qui liste les changements par enfant et par semaine, avec deux blocs distincts : **1 · Coût** (le portail est interrogé en lecture seule ; pour une commune à paiement différé comme Orgerus il n'annonce pas de montant, la carte affiche donc le nombre de repas et d'accueils concernés, « facturés après coup ») et **2 · Risque de garde** (une phrase par changement, par exemple « Alice n'est plus prise en charge à partir de 16 h 30 le jeudi 12 novembre : il faut la récupérer à l'école »). *Confirmer* envoie les changements, un panier par enfant, puis relit le portail pour vérifier que chacun a bien été pris en compte.
+**Valider.** *Valider* ouvre une fenêtre de confirmation qui liste les changements par enfant et par semaine, avec deux blocs distincts : **1 · Coût** (estimation de la différence de facture du mois, voir ci-dessous) et **2 · Risque de garde** (une phrase par changement, par exemple « Alice n'est plus prise en charge à partir de 16 h 30 le jeudi 12 novembre : il faut la récupérer à l'école »). *Confirmer* envoie les changements, un panier par enfant, puis relit le portail pour vérifier que chacun a bien été pris en compte.
+
+**Étude et accueil du soir.** Le règlement de la commune veut que l'étude s'accompagne de l'accueil du soir : l'étude seule est refusée (par la carte, par les actions `reserver`/`annuler` et par l'intégration côté serveur). Dans la carte, cocher l'étude coche aussi le soir ; cocher le soir coche aussi l'étude seulement quand le portail la propose cet enfant ce jour-là (certaines semaines, ou certaines communes, n'ont pas d'étude ; on peut ensuite la décocher seule, elle est gratuite) ; décocher le soir retire l'étude.
+
+**Coût.** La commune facture après coup et le portail n'annonce aucun montant ; la carte **estime** donc la différence de facture du mois à partir des tarifs que le portail publie : repas, accueil du matin et du soir à la journée jusqu'à 9 jours par mois, puis un forfait mensuel (accueil du matin 42,53 €, accueil du soir 55,59 €). Ces forfaits ne sont pas dans l'API : ce sont les valeurs d'Orgerus 2026-27 écrites dans `const.py` (`MONTHLY_FLAT`, `MONTHLY_DAYS_CAP`) à adapter pour une autre commune ou une autre année. Si les tarifs ne sont pas lisibles, la carte retombe sur le décompte des repas et accueils.
 
 **Si le portail a bougé.** Juste avant d'envoyer, l'intégration relit le portail. Si l'une des cases touchées n'est plus dans l'état que vous voyiez (l'autre parent a réservé entre-temps), ou si un changement n'est plus possible (date limite dépassée, service non proposé), **rien n'est envoyé** : la carte vous montre ce qui a changé et vous laisse revoir. Si seule une partie des changements est confirmée par le portail, la carte liste ceux qui n'ont pas abouti.
 
@@ -203,7 +207,7 @@ You add your Mon Espace Famille account (the app's email and password). Each chi
 
 | Entity | What | Example |
 |---|---|---|
-| `calendar.alice_periscolaire` | One event per booked day and service, at the service's hours; the description gives the cancellation deadline and, for past days, whether the child attended | Cantine 11:30–13:30, "Réservé. Annulable jusqu'au 12/11/2026 inclus." |
+| `calendar.alice_periscolaire` | One event per booked day and service, at the service's hours; the description gives the cancellation deadline and, for past days, whether the child attended | Cantine 11:30–13:20, "Réservé. Annulable jusqu'au 12/11/2026 inclus." |
 | `binary_sensor.alice_cantine_aujourd_hui` | On when a meal is booked today; `statut`, `annulable_jusqu_au` attributes | On |
 | `binary_sensor.alice_cantine_demain` | The same for tomorrow | Off |
 | `binary_sensor.alice_reservation_manquante` | On when next week has a day the canteen is open with no meal booked; `jours` attribute | On, `["2026-11-12"]` |
@@ -215,7 +219,7 @@ You add your Mon Espace Famille account (the app's email and password). Each chi
 
 Entity ids are French and the same in every language, so automations can be shared; the displayed names are translated.
 
-Calendar hours: morning care 7:00–8:30, canteen 11:30–13:30, study hall and evening care 16:30–18:45. A service the integration does not recognise becomes an all-day event.
+Calendar hours: morning care 7:00–8:20, canteen 11:30–13:20, evening care 16:30–18:45, study hall 17:00–18:30 (the after-school service hands children to the school at 8:20 and 13:20). On a study day `retour_prevu` stays the end of the evening care (18:45), which is booked with the study hall. A service the integration does not recognise becomes an all-day event.
 
 The data is read every 30 minutes: the current week and the next 3 (*Configure* changes that number).
 
@@ -275,6 +279,10 @@ The ← → arrows change week (past and future, read from the portal on demand)
 **Editing.** Tapping an editable pastille changes a *draft*: nothing is sent. Changed cells are highlighted and a footer shows "n change(s)" with *Undo changes* and *Validate*. The draft survives week navigation (prepare several weeks, validate once); it is lost when the page reloads.
 
 **Validating.** *Validate* opens a confirmation dialog listing the changes per child and per week, with two separate blocks: **1 · Cost** (the portal is asked read-only; a deferred-payment commune such as Orgerus announces no amount, so the card shows the number of meals and cares concerned, "billed afterwards") and **2 · Childcare risk** (one sentence per change, for example "Alice is no longer looked after from 16:30 on Thursday 12 November: pick her up at school"). *Confirm* sends the changes, one cart per child, then reads the portal again to check each one was taken into account.
+
+**Study hall and evening care.** The commune's rules require the evening care with the study hall: a study hall alone is refused (by the card, by the `reserver`/`annuler` actions and by the integration on the server). In the card, ticking the study hall also ticks the evening care; ticking the evening care also ticks the study hall only when the portal offers it to that child that day (some weeks, or some communes, have none; you can then untick it alone, it is free); unticking the evening care removes the study hall.
+
+**Cost.** The commune bills afterwards and the portal announces no amount, so the card **estimates** the month's bill difference from the rates the portal publishes: meals, morning and evening care per day up to 9 days a month, then a monthly flat fee (morning 42.53 €, evening 55.59 €). Those flat fees are not in the API: they are Orgerus 2026-27 values written in `const.py` (`MONTHLY_FLAT`, `MONTHLY_DAYS_CAP`), to adapt for another commune or year. If the rates cannot be read the card falls back to counting meals and cares.
 
 **When the portal moved.** Right before sending, the integration reads the portal again. If one of the touched cells is no longer in the state you saw (the other parent booked meanwhile), or a change is no longer possible (deadline passed, service not offered), **nothing is sent**: the card shows what changed and lets you review. If the portal confirms only part of the changes, the card lists those that did not go through.
 

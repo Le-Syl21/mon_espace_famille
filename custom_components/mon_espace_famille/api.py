@@ -233,3 +233,17 @@ class MefClient:
     async def services_raw(self, child_id: int, monday: date) -> list[dict]:
         """The week's answer as the portal sent it (the pricing wants it back)."""
         return await self.services_reservations(child_id, monday)
+
+    async def rates(self, child_id: int) -> dict[int, float]:
+        """The per-day rate of each service, by the service's own number.
+
+        `products/1` lists every product with its rate; a product whose rate
+        is missing is left out.
+        """
+        body = await self.request("GET", f"family/children/{child_id}/products/1")
+        found: dict[int, float] = {}
+        for product in (body or {}).get("products") or [] if isinstance(body, dict) else []:
+            rate = ((product.get("services") or [{}])[0] or {}).get("rate")
+            if isinstance(product.get("id"), int) and isinstance(rate, (int, float)):
+                found[product["id"]] = float(rate)
+        return found

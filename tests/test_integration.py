@@ -92,13 +92,13 @@ async def test_calendar(hass: HomeAssistant, setup) -> None:
     ]
     assert got[0] == (
         "2026-11-02T11:30:00+01:00",
-        "2026-11-02T13:30:00+01:00",
+        "2026-11-02T13:20:00+01:00",
         "Cantine",
         "Présent.",
     )
     assert got[2] == (
         "2026-11-05T11:30:00+01:00",
-        "2026-11-05T13:30:00+01:00",
+        "2026-11-05T13:20:00+01:00",
         "Cantine",
         "Réservé. Date limite d'annulation dépassée (03/11/2026).",
     )
@@ -145,7 +145,7 @@ def test_events_of_other_services() -> None:
     # A day marked attended before it comes is a booking that can't be cancelled.
     assert by[("Mercredi loisirs", "2026-11-10")].description == "Réservé, plus annulable."
     morning = next(e for e in events if e.summary == "Accueil du matin (absent)")
-    assert (morning.start.hour, morning.end.hour, morning.end.minute) == (7, 8, 30)
+    assert (morning.start.hour, morning.end.hour, morning.end.minute) == (7, 8, 20)
 
 
 async def test_token_refreshed_on_401(

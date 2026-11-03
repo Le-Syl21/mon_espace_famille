@@ -43,9 +43,15 @@ KIND_KEYWORDS: Final = (
 )
 
 # The commune's day, which the calendar and the "at home" sensors share:
-# périscolaire from 7:00 to 18:45, classes 8:30–11:30 and 13:30–16:30.
+# périscolaire from 7:00 to 18:45. The périscolaire hands the children over to
+# the school at 8:20 and 13:20 (the school's own arrival windows end at 8:30
+# and 13:30); classes end at 16:30.
 MORNING_CARE_START: Final = time(7, 0)
-SCHOOL_START: Final = time(8, 30)
+MORNING_CARE_END: Final = time(8, 20)
+LUNCH_START: Final = time(11, 30)
+LUNCH_END: Final = time(13, 20)
+STUDY_START: Final = time(17, 0)
+STUDY_END: Final = time(18, 30)
 SCHOOL_END: Final = time(16, 30)
 EVENING_SERVICE_END: Final = time(18, 45)
 # The child leaves home at the first time when a morning care is booked, and
@@ -65,10 +71,12 @@ KIND_NAMES: Final = {
     KIND_ACCUEIL_SOIR: "Accueil du soir",
     KIND_ETUDE: "Étude",
 }
+# The study hall (offered on the days the portal's open days list) is 17:00–18:30, but an evening care is booked with it and ends at
+# 18:45: the presence sensors use EVENING_SERVICE_END for both.
 KIND_HOURS: Final = {
-    KIND_ACCUEIL_MATIN: (MORNING_CARE_START, SCHOOL_START),
-    KIND_REPAS: (time(11, 30), time(13, 30)),
-    KIND_ETUDE: (SCHOOL_END, EVENING_SERVICE_END),
+    KIND_ACCUEIL_MATIN: (MORNING_CARE_START, MORNING_CARE_END),
+    KIND_REPAS: (LUNCH_START, LUNCH_END),
+    KIND_ETUDE: (STUDY_START, STUDY_END),
     KIND_ACCUEIL_SOIR: (SCHOOL_END, EVENING_SERVICE_END),
 }
 
@@ -116,3 +124,12 @@ PLANNING_CACHE_SECONDS: Final = 15.0
 # The planning card, served from the integration.
 CARD_FILE: Final = "mon-espace-famille-planning-card.js"
 CARD_URL: Final = f"/{DOMAIN}/{CARD_FILE}"
+
+# Billing of Orgerus 2026-27 (délibération 2026/36), which the portal does not
+# publish: morning and evening care are charged per day up to 9 days in a
+# month, then a monthly flat fee. The per-day rates come from the portal.
+MONTHLY_DAYS_CAP: Final = 9
+MONTHLY_FLAT: Final = {KIND_ACCUEIL_MATIN: 42.53, KIND_ACCUEIL_SOIR: 55.59}
+RATES_CACHE_SECONDS: Final = 6 * 3600
+# Reason code: the study hall needs the evening care of the same day.
+REASON_NEEDS_EVENING: Final = "needs_evening"

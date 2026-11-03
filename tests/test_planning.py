@@ -95,8 +95,11 @@ async def test_current_week(hass: HomeAssistant, ws, setup, fake: FakeMef) -> No
     assert thursday["open"] and not thursday["locked"]
     gone = alice["cells"]["2026-11-02"]["accueil_soir"]
     assert not gone["booked"] and gone["locked"] and gone["reason"] == "past"
-    # The generated later weeks offer the study hall on Tuesdays too: past, not "not offered".
-    assert alice["cells"]["2026-11-03"]["etude"]["reason"] == "past"
+    # The portal lists no study hall at all in this week's data: nothing to show.
+    assert all(alice["cells"][d]["etude"]["reason"] == "not_offered" for d in alice["cells"])
+    assert plan["services"]["etude"] == {"name": "Étude", "start": "17:00", "end": "18:30"}
+    assert plan["services"]["accueil_matin"]["end"] == "08:20"
+    assert plan["services"]["repas"]["end"] == "13:20"
     assert plan["services"]["accueil_soir"] == {
         "name": "Accueil du soir",
         "start": "16:30",
@@ -151,6 +154,7 @@ def _change(child, service, date, action):
 
 async def test_quote_falls_back_to_counts(hass: HomeAssistant, ws, setup, fake: FakeMef) -> None:
     await setup()
+    fake.rates = None  # the portal gives no rates: counts only
     reply = await _ask(
         ws,
         {
@@ -169,6 +173,7 @@ async def test_quote_falls_back_to_counts(hass: HomeAssistant, ws, setup, fake: 
         "amount": None,
         "currency": "EUR",
         "post_paid": True,
+        "estimate": {"available": False, "total": None, "currency": "EUR", "lines": []},
         "counts": [
             {"service": "accueil_soir", "name": "Accueil du soir", "book": 2, "cancel": 0},
             {"service": "repas", "name": "Cantine", "book": 0, "cancel": 1},
@@ -417,3 +422,139 @@ async def test_apply_validation(hass: HomeAssistant, ws, setup, fake: FakeMef) -
         },
     )
     assert reply["error"]["code"] == "invalid_format"
+
+
+async def test_quote_estimates_the_month(hass: HomeAssistant, ws, setup, fake: FakeMef) -> None:
+    await setup()
+    reply = await _ask(
+        ws,
+        {
+            "type": "mon_espace_famille/quote",
+            "changes": [
+                _change(ALICE, "accueil_soir", "2026-11-12", "book"),
+                _change(ALICE, "accueil_soir", "2026-11-16", "book"),
+                _change(ALICE, "repas", "2026-11-13", "cancel"),
+            ],
+        },
+    )
+    cost = reply["result"]["cost"]
+    assert cost["mode"] == "estimate" and cost["amount"] == round(2 * 5.92 - 5.2, 2)
+    lines = {(line["service"], line["month"]): line for line in cost["estimate"]["lines"]}
+    evening = lines[("accueil_soir", "2026-11")]
+    assert (evening["book"], evening["rate"], evening["delta"]) == (2, 5.92, 11.84)
+    assert evening["before"]["days"] == 1 and evening["cap"] == 9 and evening["flat_fee"] == 55.59
+    meals = lines[("repas", "2026-11")]
+    assert meals["cancel"] == 1 and meals["delta"] == -5.2
+
+
+async def test_study_needs_the_evening_care(hass: HomeAssistant, ws, setup, fake: FakeMef) -> None:
+    await setup()
+    study = "etude"
+    book = {"type": "mon_espace_famille/apply"}
+    # Study alone on Monday 9 (open, evening care not booked): refused.
+    reply = await _ask(
+        ws,
+        book
+        | {
+            "changes": [_change(ALICE, study, "2026-11-09", "book")],
+            "base": [_base(ALICE, study, "2026-11-09", False)],
+        },
+    )
+    result = reply["result"]
+    assert result["status"] == "refused"
+    assert result["refused"] == [
+        {"child": ALICE, "service": study, "date": "2026-11-09", "reason": "needs_evening"}
+    ]
+    assert fake.carts == []
+    # With the evening care in the same change set: one cart, both booked.
+    reply = await _ask(
+        ws,
+        book
+        | {
+            "changes": [
+                _change(ALICE, study, "2026-11-09", "book"),
+                _change(ALICE, "accueil_soir", "2026-11-09", "book"),
+            ],
+            "base": [],
+        },
+    )
+    assert reply["result"]["status"] == "applied"
+    (cart,) = fake.carts
+    assert {r["serviceReservationId"] for r in cart["servicesReservations"]} == {"7_7", "8_8"}
+    # Now the study stays booked: cancelling only the evening care is refused...
+    reply = await _ask(
+        ws, book | {"changes": [_change(ALICE, "accueil_soir", "2026-11-09", "cancel")], "base": []}
+    )
+    assert reply["result"]["refused"][0]["reason"] == "needs_evening"
+    # ...unless the study is cancelled with it.
+    reply = await _ask(
+        ws,
+        book
+        | {
+            "changes": [
+                _change(ALICE, "accueil_soir", "2026-11-09", "cancel"),
+                _change(ALICE, study, "2026-11-09", "cancel"),
+            ],
+            "base": [],
+        },
+    )
+    assert reply["result"]["status"] == "applied"
+
+
+async def test_study_is_locked_without_a_bookable_evening(
+    hass: HomeAssistant, ws, setup, fake: FakeMef
+) -> None:
+    await setup()
+    # Monday 9: the study is still open but the evening care no longer is.
+    evening = fake.week(ALICE, "20261109")[1]
+    evening["openDays"] = [d for d in evening["openDays"] if d["date"] != "20261109"]
+    plan = await _planning(ws, start="2026-11-09", fresh=True)
+    alice = next(c for c in plan["children"] if c["id"] == ALICE)
+    cells = alice["cells"]["2026-11-09"]
+    assert cells["accueil_soir"]["locked"]
+    assert cells["etude"]["locked"] and cells["etude"]["reason"] == "needs_evening"
+    # A booked study that is locked keeps its evening care locked as well.
+    fake.week(ALICE, "20261109")[2]["validated"] = [
+        {"date": "20261112", "dteLimiteSupp": "20261103", "id": 8001}
+    ]
+    fake.week(ALICE, "20261109")[1].setdefault("validated", []).append(
+        {"date": "20261112", "dteLimiteSupp": "20261111", "id": 8002}
+    )
+    plan = await _planning(ws, start="2026-11-09", fresh=True)
+    alice = next(c for c in plan["children"] if c["id"] == ALICE)
+    thursday = alice["cells"]["2026-11-12"]
+    assert thursday["etude"]["locked"] and thursday["accueil_soir"]["reason"] == "has_study"
+
+
+async def test_study_days_come_from_the_portal_not_the_weekday(
+    hass: HomeAssistant, ws, setup, fake: FakeMef
+) -> None:
+    await setup()
+    # A commune whose study hall is on Tuesdays (and none the week after).
+    for child in (ALICE, BOB):
+        fake.week(child, "20261109")[2]["openDays"] = [{"date": "20261110"}]
+        fake.week(child, "20261116")  # generated
+        for service in fake.week(child, "20261116"):
+            if service["id"] == "8_8":
+                service["openDays"] = []
+    plan = await _planning(ws, start="2026-11-09", fresh=True)
+    alice = next(c for c in plan["children"] if c["id"] == ALICE)
+    cells = alice["cells"]
+    assert not cells["2026-11-10"]["etude"]["locked"] and cells["2026-11-10"]["etude"]["open"]
+    assert cells["2026-11-09"]["etude"]["reason"] == "not_offered"
+    assert cells["2026-11-12"]["etude"]["reason"] == "not_offered"
+    # The rule follows: a Tuesday study alone is refused, with its evening care it passes.
+    reply = await _ask(
+        ws,
+        {
+            "type": "mon_espace_famille/apply",
+            "changes": [_change(ALICE, "etude", "2026-11-10", "book")],
+            "base": [],
+        },
+    )
+    assert reply["result"]["refused"][0]["reason"] == "needs_evening"
+    # A week with no study hall in the data at all (the start of the school year).
+    plan = await _planning(ws, start="2026-11-16", fresh=True)
+    alice = next(c for c in plan["children"] if c["id"] == ALICE)
+    assert all(alice["cells"][d]["etude"]["reason"] == "not_offered" for d in alice["cells"])
+    assert any(not alice["cells"][d]["accueil_soir"]["locked"] for d in alice["cells"])

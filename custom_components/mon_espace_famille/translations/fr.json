@@ -158,6 +158,12 @@
     },
     "api_error": {
       "message": "Mon Espace Famille n'a pas répondu comme prévu : {error}"
+    },
+    "needs_evening": {
+      "message": "L'étude du {dates} impose l'accueil du soir réservé le même jour."
+    },
+    "has_study": {
+      "message": "L'accueil du soir du {dates} ne peut pas être annulé tant que l'étude reste réservée."
     }
   }
 }

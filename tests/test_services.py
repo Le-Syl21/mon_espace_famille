@@ -127,7 +127,7 @@ async def test_book_not_applied(hass: HomeAssistant, setup, fake: FakeMef) -> No
             hass,
             "reserver",
             enfant=_device(hass, "Alice"),
-            service="etude",
+            service="accueil_soir",
             dates=["2026-11-12"],
         )
     assert err.value.translation_key == "not_confirmed"
@@ -194,3 +194,21 @@ async def test_bad_date(hass: HomeAssistant, setup) -> None:
         await _call(
             hass, "reserver", enfant=_device(hass, "Alice"), service="repas", dates=["demain"]
         )
+
+
+async def test_study_actions_follow_the_evening_care_rule(
+    hass: HomeAssistant, setup, fake: FakeMef
+) -> None:
+    await setup()
+    alice = _device(hass, "Alice")
+    with pytest.raises(ServiceValidationError) as err:
+        await _call(hass, "reserver", enfant=alice, service="etude", dates=["2026-11-09"])
+    assert err.value.translation_key == "needs_evening"
+    assert fake.carts == []
+    await _call(hass, "reserver", enfant=alice, service="accueil_soir", dates=["2026-11-09"])
+    await _call(hass, "reserver", enfant=alice, service="etude", dates=["2026-11-09"])
+    with pytest.raises(ServiceValidationError) as err:
+        await _call(hass, "annuler", enfant=alice, service="accueil_soir", dates=["2026-11-09"])
+    assert err.value.translation_key == "has_study"
+    await _call(hass, "annuler", enfant=alice, service="etude", dates=["2026-11-09"])
+    await _call(hass, "annuler", enfant=alice, service="accueil_soir", dates=["2026-11-09"])

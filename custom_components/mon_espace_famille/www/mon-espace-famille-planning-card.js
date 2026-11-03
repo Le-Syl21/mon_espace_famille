@@ -37,6 +37,18 @@ const TEXTS = {
     noChild: "Aucun enfant à afficher.",
     legend: "Légende",
     short: { accueil_matin: "Matin", repas: "Midi", accueil_soir: "Soir", etude: "Étude" },
+    auto: {
+      evening: "l'étude impose l'accueil du soir",
+      study: "étude incluse, gratuite",
+      evening_off: "sans accueil du soir, plus d'étude",
+    },
+    estimateNote: "Estimation, facturé après coup par la commune.",
+    estTotal: "Total",
+    capNote: (cap, fee) => `au-delà de ${cap} jours : forfait ${fee}`,
+    flatStay: "forfait déjà atteint : aucun supplément",
+    flatLeave: "retour sous le seuil : tarif à la journée",
+    estBook: (n, name, rate) => `${n} × ${name.toLowerCase()} à ${rate}`,
+    estCancel: (n, name, rate) => `${n} × ${name.toLowerCase()} annulé${n > 1 ? "s" : ""} (${rate})`,
     toBooked: "→ réservé",
     toCancelled: "→ annulé",
     booked: "Vert = réservé",
@@ -135,6 +147,18 @@ const TEXTS = {
     noChild: "No child to show.",
     legend: "Legend",
     short: { accueil_matin: "Morning", repas: "Lunch", accueil_soir: "Evening", etude: "Study" },
+    auto: {
+      evening: "the study hall requires the evening care",
+      study: "study hall included, free",
+      evening_off: "no study hall without the evening care",
+    },
+    estimateNote: "Estimate, billed afterwards by the commune.",
+    estTotal: "Total",
+    capNote: (cap, fee) => `beyond ${cap} days: flat fee ${fee}`,
+    flatStay: "flat fee already reached: nothing more to pay",
+    flatLeave: "back under the threshold: per-day rate",
+    estBook: (n, name, rate) => `${n} × ${name.toLowerCase()} at ${rate}`,
+    estCancel: (n, name, rate) => `${n} × ${name.toLowerCase()} cancelled (${rate})`,
     toBooked: "→ booked",
     toCancelled: "→ cancelled",
     booked: "Green = booked",
@@ -678,6 +702,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
       this._load();
     } else if (act === "undo") {
       this._draft.clear();
+      this._declined?.clear();
       this._render();
     } else if (act === "validate") {
       this._openConfirm();
@@ -698,12 +723,46 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     const { service, date } = pill.dataset;
     const cell = this._cell(plan, child, service, date);
     if (!cell || cell.locked) return;
-    const key = keyOf(child, service, date);
-    if (this._draft.has(key)) this._draft.delete(key);
-    else this._draft.set(key, { child, service, date, action: cell.booked ? "cancel" : "book", base: cell.booked });
+    const target = !this._view(plan, { id: child }, service, date).booked;
+    this._setView(plan, child, service, date, target);
+    this._studyRule(plan, child, service, date, target);
     this._notice = null;
     this._render();
     this.shadowRoot.querySelector(`.pill[data-child="${child}"][data-service="${service}"][data-date="${date}"]`)?.focus();
+  }
+
+  // Make a tile show `want`: a draft when that differs from the portal, none otherwise.
+  _setView(plan, child, service, date, want, auto) {
+    const cell = this._cell(plan, child, service, date);
+    if (!cell || cell.locked || cell.reason === "not_offered") return false;
+    const key = keyOf(child, service, date);
+    if (want === cell.booked) this._draft.delete(key);
+    else this._draft.set(key, { child, service, date, action: want ? "book" : "cancel", base: cell.booked, ...(auto ? { auto } : {}) });
+    return true;
+  }
+
+  // The study hall goes with the evening care. Ticking either ticks both (the
+  // study only where it is offered and open), the study can then be unticked
+  // alone, and unticking the evening care removes the study.
+  _studyRule(plan, child, service, date, target) {
+    const declined = (this._declined ||= new Set());
+    const pair = `${child}|${date}`;
+    if (service === "etude") {
+      if (target) {
+        declined.delete(pair);
+        this._setView(plan, child, "accueil_soir", date, true, "evening");
+      } else {
+        declined.add(pair);
+      }
+    } else if (service === "accueil_soir") {
+      if (target) {
+        if (!declined.has(pair)) this._setView(plan, child, "etude", date, true, "study");
+      } else {
+        declined.delete(pair);
+        const study = this._view(plan, { id: child }, "etude", date);
+        if (study && study.booked) this._setView(plan, child, "etude", date, false, "evening_off");
+      }
+    }
   }
 
   _changes() {
@@ -770,7 +829,11 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
         this._notice = { kind: "ok", text: this._t.done };
       } else {
         if (res.status === "conflict") {
-          for (const c of res.conflicts) this._draft.delete(keyOf(c.child, c.service, c.date));
+          for (const c of res.conflicts) {
+            this._draft.delete(keyOf(c.child, c.service, c.date));
+            // A study hall cannot stay without the evening care it was drafted with.
+            if (c.service === "accueil_soir") this._draft.delete(keyOf(c.child, "etude", c.date));
+          }
         } else if (res.status === "partial" || res.status === "failed") {
           for (const r of res.results) if (r.result === "applied") this._draft.delete(keyOf(r.child, r.service, r.date));
         }
@@ -813,7 +876,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
         for (const c of list) {
           const q = items.get(keyOf(c.child, c.service, c.date));
           const bad = q && !q.valid;
-          html += `<li><span class="mini ${c.action === "book" ? "on" : "off"}">${this._icon(c.service)}</span>${esc(t.svc[c.service])}, ${esc(this._longDay(c.date))} <b>${c.action === "book" ? t.toBooked : t.toCancelled}</b>${bad ? ` <span class="bad">— ${esc(t.refusedItem(t.reasons[q.reason] || q.reason || "?"))}</span>` : ""}</li>`;
+          html += `<li><span class="mini ${c.action === "book" ? "on" : "off"}">${this._icon(c.service)}</span>${esc(t.svc[c.service])}, ${esc(this._longDay(c.date))} <b>${c.action === "book" ? t.toBooked : t.toCancelled}</b>${c.auto ? ` <small>(${esc(t.auto[c.auto])})</small>` : ""}${bad ? ` <span class="bad">— ${esc(t.refusedItem(t.reasons[q.reason] || q.reason || "?"))}</span>` : ""}</li>`;
         }
         html += `</ul>`;
       }
@@ -827,7 +890,25 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     if (!modal.quote) return `<p><span class="spin"></span>${t.estimating}</p>`;
     const cost = modal.quote.cost;
     let html;
-    if (cost.mode === "amount") {
+    if (cost.mode === "estimate") {
+      const loc = this._lang === "fr" ? "fr-FR" : "en-GB";
+      const money = (v, sign) => new Intl.NumberFormat(loc, { style: "currency", currency: cost.currency || "EUR", ...(sign ? { signDisplay: "always" } : {}) }).format(v);
+      const rows = [];
+      for (const l of cost.estimate.lines) {
+        if (!l.rate) continue; // free (the study hall): nothing to pay
+        const month = new Intl.DateTimeFormat(this._lang, { month: "long" }).format(parseISO(`${l.month}-01`));
+        const name = t.svc[l.service] || l.service;
+        const parts = [];
+        if (l.book) parts.push(t.estBook(l.book, name, money(l.rate)));
+        if (l.cancel) parts.push(t.estCancel(l.cancel, name, money(l.rate)));
+        const notes = [];
+        if (l.after.flat && !l.before.flat) notes.push(t.capNote(l.cap, money(l.flat_fee)));
+        else if (l.after.flat && l.before.flat) notes.push(t.flatStay);
+        else if (l.before.flat) notes.push(t.flatLeave);
+        rows.push(`<li><b>${esc(money(l.delta, true))}</b> — ${esc(l.child_name)}, ${esc(month)} : ${esc(parts.join(", "))}${notes.length ? ` <small>(${esc(notes.join(" ; "))})</small>` : ""}</li>`);
+      }
+      html = `<ul>${rows.join("")}</ul>${rows.length > 1 ? `<p><b>${t.estTotal} : ${esc(money(cost.amount, true))}</b></p>` : ""}<p>${t.estimateNote}</p>`;
+    } else if (cost.mode === "amount") {
       const money = new Intl.NumberFormat(this._lang === "fr" ? "fr-FR" : "en-GB", { style: "currency", currency: cost.currency || "EUR" }).format(cost.amount);
       html = `<p>${t.costAmount(money)}</p>`;
     } else {

@@ -181,6 +181,13 @@ def make_app() -> web.Application:
     async def calculate(request):
         return web.json_response("")
 
+    @routes.get(r"/api/v2/family/children/{child:\d+}/products/{pid:\d+}")
+    async def products(request):
+        rates = {1: 5.2, 6: 4.28, 7: 5.92, 8: 0, 3: 1.99}
+        return web.json_response(
+            {"products": [{"id": k, "services": [{"rate": v}]} for k, v in rates.items()]}
+        )
+
     # Test control.
     @routes.get("/__admin/state")
     async def state(request):
@@ -195,6 +202,18 @@ def make_app() -> web.Application:
     async def other_parent(request):
         body = await request.json()  # {child, sid, date: YYYYMMDD as shown to clients}
         portal.book(body["child"], body["sid"], _d(body["date"]) - portal.delta)
+        return web.json_response({})
+
+    @routes.post("/__admin/open")
+    async def set_open(request):
+        body = await request.json()  # {sid, date, open, children?}: change a service's open days
+        day = _d(body["date"]) - portal.delta
+        for child in body.get("children", [ALICE, BOB]):
+            service = portal.service(child, body["sid"], day)
+            days = [d for d in service["openDays"] if d["date"] != _s(day)]
+            if body["open"]:
+                days.append({"date": _s(day)})
+            service["openDays"] = days
         return web.json_response({})
 
     @routes.post("/__admin/apply")

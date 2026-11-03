@@ -259,14 +259,15 @@ def main() -> None:
             pill(page, ALICE, "accueil_soir", thu_n).click()
             pill(page, ALICE, "repas", fri_n).click()  # booked: cancel
             pill(page, BOB, "accueil_soir", nxt).click()
-            expect(c.locator(".foot .count")).to_contain_text("4 modifications")
+            expect(c.locator(".foot .count")).to_contain_text("6 modifications")
             shot(page, f"draft-{tag}")
 
             # Validate, look at the confirmation, confirm.
             c.locator('[data-act="validate"]').click()
             dialog = c.locator(".dialog")
             expect(dialog).to_be_visible()
-            expect(dialog.locator(".block.cost")).to_contain_text("facturés après coup")
+            expect(dialog.locator(".block.cost")).to_contain_text("Estimation, facturé après coup")
+            expect(dialog.locator(".block.cost")).to_contain_text("accueil du soir à")
             expect(dialog.locator(".block.risk")).to_contain_text("pas de repas à la cantine")
             shot(page, f"confirm-{tag}")
             c.locator('[data-act="confirm"]').click()
@@ -286,7 +287,12 @@ def main() -> None:
                 {
                     "childId": ALICE,
                     "servicesReservations": [
-                        {"dates": [d(fri), d(thu_n)], "serviceReservationId": "7_7", "serviceId": 7}
+                        {
+                            "dates": [d(fri), d(thu_n)],
+                            "serviceReservationId": "7_7",
+                            "serviceId": 7,
+                        },
+                        {"dates": [d(thu_n)], "serviceReservationId": "8_8", "serviceId": 8},
                     ],
                     "cancelationReservations": [
                         {
@@ -300,7 +306,8 @@ def main() -> None:
                 {
                     "childId": BOB,
                     "servicesReservations": [
-                        {"dates": [d(nxt)], "serviceReservationId": "7_7", "serviceId": 7}
+                        {"dates": [d(nxt)], "serviceReservationId": "7_7", "serviceId": 7},
+                        {"dates": [d(nxt)], "serviceReservationId": "8_8", "serviceId": 8},
                     ],
                     "cancelationReservations": [],
                 },
@@ -314,6 +321,70 @@ def main() -> None:
             expect(pill(page, ALICE, "repas", fri_n)).to_have_attribute("aria-pressed", "false")
             expect(c.locator(".foot")).to_have_count(0)
 
+            # The study hall goes with the evening care (Mondays and Thursdays only).
+            admin("/__admin/reset", {})
+            page.reload()
+            c.locator(".table").wait_for()
+            c.locator('[data-act="next"]').click()
+            expect(pill(page, ALICE, "accueil_soir", nxt)).to_be_visible()
+            count = c.locator(".foot .count")
+            tue = nxt + timedelta(days=1)
+            pill(page, ALICE, "accueil_soir", nxt).click()  # Monday: study offered
+            expect(count).to_contain_text("2 modifications")
+            expect(pill(page, ALICE, "etude", nxt)).to_have_attribute("aria-pressed", "true")
+            pill(page, ALICE, "etude", nxt).click()  # unticking the study keeps the evening care
+            expect(count).to_contain_text("1 modification")
+            expect(pill(page, ALICE, "accueil_soir", nxt)).to_have_attribute("aria-pressed", "true")
+            pill(page, ALICE, "accueil_soir", nxt).click()  # off: nothing left
+            expect(c.locator(".foot")).to_have_count(0)
+            pill(page, ALICE, "accueil_soir", nxt).click()  # off then on again: both again
+            expect(count).to_contain_text("2 modifications")
+            pill(page, ALICE, "accueil_soir", tue).click()  # Tuesday: no study hall to add
+            expect(count).to_contain_text("3 modifications")
+            expect(pill(page, ALICE, "etude", tue)).to_have_count(0)
+            shot(page, f"study-{tag}")
+            c.locator('[data-act="validate"]').click()
+            expect(c.locator(".dialog")).to_contain_text("étude incluse, gratuite")
+            c.locator('[data-act="back"]').click()
+            c.locator('[data-act="undo"]').click()
+            # Study days come from the portal: move the study hall to another day of
+            # the week, then remove it altogether (the start of a school year).
+            admin("/__admin/reset", {})
+            for day, on in ((nxt, False), (tue, True)):
+                admin("/__admin/open", {"sid": "8_8", "date": day.strftime("%Y%m%d"), "open": on})
+            page.reload()
+            c.locator(".table").wait_for()
+            c.locator('[data-act="next"]').click()
+            expect(pill(page, ALICE, "accueil_soir", nxt)).to_be_visible()
+            pill(page, ALICE, "accueil_soir", nxt).click()  # no study offered that day any more
+            expect(count).to_contain_text("1 modification")
+            pill(page, ALICE, "accueil_soir", tue).click()  # the new study day
+            expect(count).to_contain_text("3 modifications")
+            expect(pill(page, ALICE, "etude", tue)).to_have_attribute("aria-pressed", "true")
+            c.locator('[data-act="undo"]').click()
+            admin("/__admin/open", {"sid": "8_8", "date": tue.strftime("%Y%m%d"), "open": False})
+            page.reload()
+            c.locator(".table").wait_for()
+            c.locator('[data-act="next"]').click()
+            expect(pill(page, ALICE, "accueil_soir", tue)).to_be_visible()
+            pill(page, ALICE, "accueil_soir", tue).click()  # no study hall in that week's data
+            expect(count).to_contain_text("1 modification")
+            c.locator('[data-act="undo"]').click()
+            admin("/__admin/reset", {})
+            page.reload()
+            c.locator(".table").wait_for()
+            c.locator('[data-act="next"]').click()
+            # Unticking the evening care removes a booked study hall too.
+            for sid in ("7_7", "8_8"):
+                admin("/__admin/book", {"child": BOB, "sid": sid, "date": thu_n.strftime("%Y%m%d")})
+            page.reload()
+            c.locator(".table").wait_for()
+            c.locator('[data-act="next"]').click()
+            expect(pill(page, BOB, "etude", thu_n)).to_have_attribute("aria-pressed", "true")
+            pill(page, BOB, "accueil_soir", thu_n).click()
+            expect(count).to_contain_text("2 modifications")
+            expect(pill(page, BOB, "etude", thu_n)).to_have_attribute("aria-pressed", "false")
+
             # A conflict: the other parent books the cell while the draft waits.
             admin("/__admin/reset", {})
             page.reload()
@@ -323,7 +394,7 @@ def main() -> None:
             pill(page, ALICE, "accueil_soir", thu_n).click()
             pill(page, BOB, "accueil_soir", thu_n).click()
             c.locator('[data-act="validate"]').click()
-            expect(c.locator(".dialog .block.cost")).to_contain_text("facturés", timeout=30000)
+            expect(c.locator(".dialog .block.cost")).to_contain_text("Estimation", timeout=30000)
             # The other parent books while the confirmation is open.
             admin("/__admin/book", {"child": ALICE, "sid": "7_7", "date": thu_n.strftime("%Y%m%d")})
             try:
@@ -341,7 +412,7 @@ def main() -> None:
                 "aria-pressed", "true", timeout=20000
             )
             # Bob's draft is kept (it did not conflict).
-            expect(c.locator(".foot .count")).to_contain_text("1 modification")
+            expect(c.locator(".foot .count")).to_contain_text("2 modifications")
             shot(page, f"after-conflict-{tag}")
             ctx.close()
         browser.close()

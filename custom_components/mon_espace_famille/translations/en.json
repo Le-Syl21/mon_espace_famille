@@ -158,6 +158,12 @@
     },
     "api_error": {
       "message": "Mon Espace Famille did not answer as expected: {error}"
+    },
+    "needs_evening": {
+      "message": "The study hall of {dates} needs the evening care booked the same day."
+    },
+    "has_study": {
+      "message": "The evening care of {dates} cannot be cancelled while the study hall stays booked."
     }
   }
 }

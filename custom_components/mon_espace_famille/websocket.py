@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 import voluptuous as vol
@@ -17,9 +17,11 @@ from homeassistant.util import dt as dt_util
 from .api import MefAuthError, MefError
 from .const import DOMAIN, KIND_NAMES, KINDS, VERIFY_ATTEMPTS, VERIFY_DELAY
 from .coordinator import MefCoordinator, action_lock
+from .cost import estimate, month_bounds
 from .model import Child, monday_of
 from .planning import (
     BOOK,
+    BOOKED_STATES,
     CANCEL,
     Calendar,
     Change,
@@ -206,6 +208,43 @@ async def _portal_check(
     return amount_total, post_paid, refused
 
 
+async def _estimate(
+    coordinator: MefCoordinator, valid: list[Change], week_of: dict[tuple[int, date], Child]
+) -> dict:
+    """The monthly cost difference of the changes, from the portal's rates."""
+    unavailable = {"available": False, "total": None, "currency": "EUR", "lines": []}
+    names = _names(coordinator)
+    try:
+        rates: dict[tuple[int, str], float | None] = {}
+        for ch in valid:
+            if (ch.child, ch.service) in rates:
+                continue
+            service = service_of(week_of[(ch.child, monday_of(ch.day))], ch.service)
+            by_id = await coordinator.async_rates(ch.child)
+            rates[(ch.child, ch.service)] = by_id.get(service.service_id) if service else None
+        # Every week of the touched months, to count what is booked already.
+        months = {(c.day.year, c.day.month) for c in valid}
+        mondays = set()
+        for year, month in months:
+            first, last = month_bounds(year, month)
+            candidates = (monday_of(first) + timedelta(weeks=n) for n in range(6))
+            mondays.update(m for m in candidates if m <= last)
+        counts: dict[tuple[int, str, str], int] = {}
+        for monday in sorted(mondays):
+            for child_id, child in (await coordinator.async_week(monday)).items():
+                for service in child.services.values():
+                    for day, entry in service.days.items():
+                        if (day.year, day.month) in months and entry.status in BOOKED_STATES:
+                            key = (child_id, service.kind or "", f"{day.year}-{day.month:02d}")
+                            counts[key] = counts.get(key, 0) + 1
+    except MefAuthError:
+        raise
+    except MefError as err:
+        _LOGGER.debug("Rates unavailable: %s", err)
+        return unavailable
+    return estimate(counts, [(c.child, c.service, c.day, c.action) for c in valid], rates, names)
+
+
 async def _quote(hass: HomeAssistant, msg: dict) -> dict:
     coordinator = _entry(hass, msg.get("entry_id"))
     changes = [Change(c["child"], c["service"], c["date"], c["action"]) for c in msg["changes"]]
@@ -239,17 +278,25 @@ async def _quote(hass: HomeAssistant, msg: dict) -> dict:
         )
     valid = [ch for ch, item in zip(changes, items, strict=True) if item["valid"]]
     amount, post_paid, portal_errors = None, False, []
+    est = {"available": False, "total": None, "currency": "EUR", "lines": []}
     if valid:
         amount, post_paid, portal_errors = await _portal_check(
             coordinator, valid, week_of, carts(valid, week_of)
         )
+        if amount is None:
+            est = await _estimate(coordinator, valid, week_of)
     return {
         "items": items,
         "valid": len(valid) == len(items) and not portal_errors,
         "portal_errors": portal_errors,
         "cost": {
-            "mode": "amount" if amount is not None else "counts",
-            "amount": amount,
+            "mode": "amount"
+            if amount is not None
+            else "estimate"
+            if est["available"]
+            else "counts",
+            "amount": amount if amount is not None else est["total"],
+            "estimate": est,
             "currency": "EUR",
             "post_paid": post_paid,
             "counts": _counts(valid),

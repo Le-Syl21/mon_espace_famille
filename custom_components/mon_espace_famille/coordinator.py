@@ -21,6 +21,7 @@ from .const import (
     CONF_WEEKS,
     DOMAIN,
     PLANNING_CACHE_SECONDS,
+    RATES_CACHE_SECONDS,
     UPDATE_INTERVAL,
     WEEKS_DEFAULT,
 )
@@ -52,6 +53,7 @@ class MefCoordinator(DataUpdateCoordinator[Family]):
         self._commune: str | None = None
         self._unsub_midnight = None
         self._weeks: dict[date, tuple[float, dict[int, Child]]] = {}
+        self._rates: dict[int, tuple[float, dict[int, float]]] = {}
 
     @property
     def weeks_ahead(self) -> int:
@@ -138,3 +140,12 @@ class MefCoordinator(DataUpdateCoordinator[Family]):
 
     def forget_weeks(self) -> None:
         self._weeks.clear()
+
+    async def async_rates(self, child_id: int) -> dict[int, float]:
+        """The child's per-day rates by service number, kept for a few hours."""
+        cached = self._rates.get(child_id)
+        if cached and time.monotonic() - cached[0] < RATES_CACHE_SECONDS:
+            return cached[1]
+        rates = await self.client.rates(child_id)
+        self._rates[child_id] = (time.monotonic(), rates)
+        return rates
