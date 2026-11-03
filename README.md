@@ -99,6 +99,53 @@ automation:
             {{ state_attr('binary_sensor.alice_reservation_manquante', 'jours') | join(', ') }}
 ```
 
+### La carte « Planning » (0.2.0)
+
+Une carte pour voir **et modifier** la semaine d'un coup d'œil : une ligne par enfant, une colonne par jour ouvert (les mercredis, week-ends et jours fériés disparaissent d'eux-mêmes), et dans chaque case une pastille par service auquel l'enfant est inscrit, dans l'ordre matin, midi, soir, étude.
+
+| Pastille | Sens |
+|---|---|
+| ✓ plein | Réservé, modifiable |
+| ✗ en pointillés | Non réservé, modifiable |
+| ✓ ou ✗ grisé avec un petit cadenas | Verrouillé : jour passé, date limite d'annulation dépassée (réservé) ou de réservation dépassée (non réservé). Le survol ou la lecture d'écran donne la date limite. |
+| Contour épais et crayon | Modifié, pas encore envoyé |
+| (vide) | Service non proposé ce jour-là |
+
+Les flèches ← → changent de semaine (passé comme futur, lues sur le portail à la demande), « Aujourd'hui » revient à la semaine en cours, et l'en-tête donne le numéro de semaine et les dates (« Semaine 45 · 2/11 → 6/11 »).
+
+**Modifier.** Toucher une pastille modifiable change un *brouillon* : rien n'est envoyé. Les cases modifiées sont mises en évidence et un pied de carte indique « n modification(s) » avec *Annuler les modifications* et *Valider*. Le brouillon survit au changement de semaine (on peut préparer plusieurs semaines puis valider d'un coup) ; il est perdu si l'on recharge la page.
+
+**Valider.** *Valider* ouvre une fenêtre de confirmation qui liste les changements par enfant et par semaine, avec deux blocs distincts : **1 · Coût** (le portail est interrogé en lecture seule ; pour une commune à paiement différé comme Orgerus il n'annonce pas de montant, la carte affiche donc le nombre de repas et d'accueils concernés, « facturés après coup ») et **2 · Risque de garde** (une phrase par changement, par exemple « Alice n'est plus prise en charge à partir de 16 h 30 le jeudi 12 novembre : il faut la récupérer à l'école »). *Confirmer* envoie les changements, un panier par enfant, puis relit le portail pour vérifier que chacun a bien été pris en compte.
+
+**Si le portail a bougé.** Juste avant d'envoyer, l'intégration relit le portail. Si l'une des cases touchées n'est plus dans l'état que vous voyiez (l'autre parent a réservé entre-temps), ou si un changement n'est plus possible (date limite dépassée, service non proposé), **rien n'est envoyé** : la carte vous montre ce qui a changé et vous laisse revoir. Si seule une partie des changements est confirmée par le portail, la carte liste ceux qui n'ont pas abouti.
+
+<p align="center"><img src="docs/card-phone-draft.webp" alt="La carte sur téléphone, avec un brouillon de 4 modifications" width="260"> <img src="docs/card-confirm-dark.webp" alt="La confirmation : coût et risque de garde, thème sombre" width="420"></p>
+
+#### Ajouter la carte
+
+L'intégration charge la carte toute seule dans tous les tableaux de bord (mode « stockage » comme mode YAML) : aucune ressource à déclarer. Dans l'éditeur du tableau de bord, *Ajouter une carte* → *Personnalisé : Mon Espace Famille*, ou en YAML :
+
+```yaml
+type: custom:mon-espace-famille-planning-card
+layout: grid          # grid (2 × 2, défaut) ou row (sur une ligne, carte large)
+# entry_id: ...       # seulement si vous avez plusieurs comptes
+# children: [Alice]   # n'afficher que ces enfants (prénoms ou identifiants)
+# title: Périscolaire
+```
+
+| Option | Rôle |
+|---|---|
+| `layout` | `grid` : les pastilles en 2 × 2, étroit, tient sur téléphone. `row` : les pastilles d'un jour sur une ligne, pour une carte large (tableau de bord en pleine largeur) ; là où la carte est trop étroite (téléphone), elle repasse seule en 2 × 2 |
+| `entry_id` | Le compte, si vous en avez plusieurs (sinon le premier) |
+| `children` | Liste de prénoms ou d'identifiants à afficher |
+| `title` | Un titre au-dessus de la carte |
+
+Si votre tableau de bord est en mode YAML et que la carte n'apparaît pas, ajoutez la ressource à la main : `url: /mon_espace_famille/mon-espace-famille-planning-card.js`, `type: module`.
+
+#### Commandes WebSocket
+
+Pour les curieux (la carte les utilise ; tout utilisateur connecté peut les appeler, pas besoin d'être administrateur) : `mon_espace_famille/planning` (`start` : une date de la semaine voulue), `mon_espace_famille/quote` (`changes` : liste de `{child, service, date, action: book|cancel}`) et `mon_espace_famille/apply` (`changes` et `base`, l'état de chaque case tel que la carte le voyait). Les actions `reserver` et `annuler` ci-dessus continuent de fonctionner.
+
 ### Chauffer la chambre au bon moment
 
 Le capteur `retour_prevu` permet de garder une chambre froide tant que l'enfant est à l'accueil du soir, et de ne la chauffer qu'une heure avant son retour (les 10 minutes de trajet sont déjà comptées) :
@@ -137,7 +184,8 @@ Les jours sans réservation, `retour_prevu` est inconnu : la condition est fauss
 
 - Réserver et annuler des jours, oui ; **inscrire** un enfant à un service pour l'année (par exemple l'accueil du matin qu'on n'avait pas coché en début d'année), non : le portail traite cela comme une demande que la mairie valide, à faire sur le portail.
 - Mon Espace Famille ne publie pas d'API : l'intégration parle à celle de son application web, qui peut changer sans prévenir.
-- Testée avec une seule commune, où les services sont payés après coup. Une commune en prépaiement, où il faut payer pour valider le panier, n'est pas prise en charge.
+- Testée avec une seule commune, où les services sont payés après coup. Une commune en prépaiement, où il faut payer pour valider le panier, n'est pas prise en charge. La carte annonce donc des quantités et non un prix : le portail ne donne pas de montant à l'avance pour une commune à paiement différé (le montant n'est lu que s'il en annonce un, ce qui n'a pas pu être vérifié).
+- La carte déduit les jours d'école de ce que le portail propose : un jour férié ou un mercredi n'apparaît pas, mais un jour déjà verrouillé et jamais proposé avant ne peut pas toujours être distingué d'un jour fermé.
 - Les horaires (calendrier, départ à 8 h 10 ou 7 h, fin de classe, marge de trajet de 10 min) sont ceux de cette commune et les mêmes tous les jours (ils se changent dans `const.py`).
 
 ### 💬 Communauté & support
@@ -210,6 +258,53 @@ script:
 
 Before sending anything the integration reads the weeks concerned again and refuses, with a clear message, a service the child is not registered to, a booking on a day the service is closed or past its booking deadline, and a cancellation of a day not booked or past its cancellation deadline. Days already booked are skipped. Mon Espace Famille answers "queued": the integration then reads the week again until the change shows (ten seconds at most) and raises an error if it does not.
 
+### The "Planning" card (0.2.0)
+
+A card to see **and edit** the week at a glance: a row per child, a column per open day (Wednesdays, weekends and holidays disappear by themselves), and in each cell one pastille per service the child is registered to, in the order morning, noon, evening, study.
+
+| Pastille | Meaning |
+|---|---|
+| solid ✓ | Booked, editable |
+| dashed ✗ | Not booked, editable |
+| greyed ✓ or ✗ with a small padlock | Locked: past day, cancellation deadline passed (booked) or booking deadline passed (not booked). Hovering or a screen reader gives the deadline. |
+| Thick outline and pencil | Changed, not sent yet |
+| (empty) | Service not offered that day |
+
+The ← → arrows change week (past and future, read from the portal on demand), "Today" goes back to the current week, and the header gives the week number and dates ("Week 45 · 2/11 → 6/11").
+
+**Editing.** Tapping an editable pastille changes a *draft*: nothing is sent. Changed cells are highlighted and a footer shows "n change(s)" with *Undo changes* and *Validate*. The draft survives week navigation (prepare several weeks, validate once); it is lost when the page reloads.
+
+**Validating.** *Validate* opens a confirmation dialog listing the changes per child and per week, with two separate blocks: **1 · Cost** (the portal is asked read-only; a deferred-payment commune such as Orgerus announces no amount, so the card shows the number of meals and cares concerned, "billed afterwards") and **2 · Childcare risk** (one sentence per change, for example "Alice is no longer looked after from 16:30 on Thursday 12 November: pick her up at school"). *Confirm* sends the changes, one cart per child, then reads the portal again to check each one was taken into account.
+
+**When the portal moved.** Right before sending, the integration reads the portal again. If one of the touched cells is no longer in the state you saw (the other parent booked meanwhile), or a change is no longer possible (deadline passed, service not offered), **nothing is sent**: the card shows what changed and lets you review. If the portal confirms only part of the changes, the card lists those that did not go through.
+
+<p align="center"><img src="docs/card-phone-draft.webp" alt="The card on a phone, with a draft of 4 changes" width="260"> <img src="docs/card-confirm-dark.webp" alt="The confirmation: cost and childcare risk, dark theme" width="420"></p>
+
+#### Adding the card
+
+The integration loads the card in every dashboard by itself (storage mode and YAML mode alike): no resource to declare. In the dashboard editor, *Add card* → *Custom: Mon Espace Famille*, or in YAML:
+
+```yaml
+type: custom:mon-espace-famille-planning-card
+layout: grid          # grid (2 × 2, default) or row (one line, wide card)
+# entry_id: ...       # only if you have several accounts
+# children: [Alice]   # show only these children (first names or ids)
+# title: After-school
+```
+
+| Option | Purpose |
+|---|---|
+| `layout` | `grid`: pastilles 2 × 2, narrow, fits a phone. `row`: a day's pastilles on one line, for a wide card (full-width dashboard); where the card is too narrow (a phone) it falls back to 2 × 2 by itself |
+| `entry_id` | The account, if you have several (else the first one) |
+| `children` | List of first names or ids to show |
+| `title` | A title above the card |
+
+If your dashboard is in YAML mode and the card does not show up, add the resource by hand: `url: /mon_espace_famille/mon-espace-famille-planning-card.js`, `type: module`.
+
+#### WebSocket commands
+
+For the curious (the card uses them; any logged-in user can call them, no need to be an administrator): `mon_espace_famille/planning` (`start`: a date of the wanted week), `mon_espace_famille/quote` (`changes`: a list of `{child, service, date, action: book|cancel}`) and `mon_espace_famille/apply` (`changes` and `base`, each cell's state as the card saw it). The `reserver` and `annuler` actions above keep working.
+
 ### Heating a bedroom at the right time
 
 The `retour_prevu` sensor lets a bedroom stay cold while the child is in evening care, and be heated only an hour before the child gets home (the 10 minutes of travel are already counted):
@@ -248,7 +343,8 @@ On days with no booking `retour_prevu` is unknown, the condition is false and th
 
 - Booking and cancelling days works; **registering** a child to a service for the year (for instance the morning care that was not ticked at the start of the year) does not: the portal handles it as a request that the town hall validates, so do it on the portal.
 - Mon Espace Famille publishes no API: the integration talks to its web app's one, which may change without notice.
-- Tested with a single commune, where services are paid afterwards. A commune where the cart must be paid in advance is not supported.
+- Tested with a single commune, where services are paid afterwards. A commune where the cart must be paid in advance is not supported. The card therefore announces quantities, not a price: the portal gives no amount in advance for a deferred-payment commune (an amount is only read if the portal announces one, which could not be verified).
+- The card infers school days from what the portal offers: a holiday or a Wednesday does not show, but a day that is already locked and was never offered before cannot always be told apart from a closed day.
 - The hours (calendar, 8:10 or 7:00 departure, end of school, 10-minute travel margin) are that commune's, the same every day (they live in `const.py`).
 
 ### 💬 Community & support
@@ -266,6 +362,8 @@ python3.14 -m venv .venv
 ```
 
 The tests never reach the real server: a fake one answers from anonymised recordings in `tests/fixtures`.
+
+The card is also driven in a real browser: `tests/browser/run.sh` starts Home Assistant and a stand-in portal (`tests/browser/fake_portal.py`, reached through the developer-only `MEF_API_BASE` environment variable) in Docker and clicks through the card with Playwright (screenshots, and the exact carts the portal receives).
 
 ## License / Licence
 
