@@ -6,18 +6,21 @@ from __future__ import annotations
 from calendar import monthrange
 from datetime import date
 
-from .const import MONTHLY_DAYS_CAP, MONTHLY_FLAT
+from .settings import Settings
 
 
-def month_cost(kind: str, days: int, rate: float) -> tuple[float, bool]:
+def month_cost(
+    kind: str, days: int, rate: float, settings: Settings | None = None
+) -> tuple[float, bool]:
     """(amount, flat fee applied) of `days` booked days of a service in a month.
 
-    Morning and evening care cost the per-day rate up to MONTHLY_DAYS_CAP days
-    and the monthly flat fee beyond; the other services are charged per day.
+    Morning and evening care cost the per-day rate up to the cap (9 days at
+    Orgerus) and the monthly flat fee beyond; the other services are charged
+    per day. The cap and the fees are the household's settings.
     """
-    flat = MONTHLY_FLAT.get(kind)
-    if flat is not None and days > MONTHLY_DAYS_CAP:
-        return flat, True
+    fee = (settings or Settings()).flat_applies(kind, days)
+    if fee is not None:
+        return fee, True
     return round(days * rate, 2), False
 
 
@@ -30,6 +33,7 @@ def estimate(
     changes: list[tuple[int, str, date, str]],
     rates: dict[tuple[int, str], float | None],
     names: dict[int, str],
+    settings: Settings | None = None,
 ) -> dict:
     """The monthly difference the changes make, per child, service and month.
 
@@ -41,16 +45,18 @@ def estimate(
     for child, kind, day, action in changes:
         line = touched.setdefault((child, kind, f"{day.year}-{day.month:02d}"), [0, 0])
         line[0 if action == "book" else 1] += 1
+    settings = settings or Settings()
+    custom = settings.customised
     if any(rates.get((child, kind)) is None for child, kind, _ in touched):
-        return {"available": False, "total": None, "currency": "EUR", "lines": []}
+        return {"available": False, "total": None, "currency": "EUR", "lines": [], "custom": custom}
     lines = []
     total = 0.0
     for (child, kind, month), (book, cancel) in sorted(touched.items(), key=lambda kv: kv[0][2]):
         rate = float(rates[(child, kind)])  # type: ignore[arg-type]
         days = counts.get((child, kind, month), 0)
         after = max(days + book - cancel, 0)
-        amount_before, flat_before = month_cost(kind, days, rate)
-        amount_after, flat_after = month_cost(kind, after, rate)
+        amount_before, flat_before = month_cost(kind, days, rate, settings)
+        amount_after, flat_after = month_cost(kind, after, rate, settings)
         delta = round(amount_after - amount_before, 2)
         total += delta
         lines.append(
@@ -62,11 +68,17 @@ def estimate(
                 "book": book,
                 "cancel": cancel,
                 "rate": rate,
-                "cap": MONTHLY_DAYS_CAP,
-                "flat_fee": MONTHLY_FLAT.get(kind),
+                "cap": settings.cap_days,
+                "flat_fee": settings.flat.get(kind),
                 "before": {"days": days, "amount": amount_before, "flat": flat_before},
                 "after": {"days": after, "amount": amount_after, "flat": flat_after},
                 "delta": delta,
             }
         )
-    return {"available": True, "total": round(total, 2), "currency": "EUR", "lines": lines}
+    return {
+        "available": True,
+        "total": round(total, 2),
+        "currency": "EUR",
+        "lines": lines,
+        "custom": custom,
+    }

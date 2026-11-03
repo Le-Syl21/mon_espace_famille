@@ -126,7 +126,7 @@ Les flèches ← → changent de semaine (passé comme futur, lues sur le portai
 
 **Étude et accueil du soir.** Le règlement de la commune veut que l'étude s'accompagne de l'accueil du soir : l'étude seule est refusée (par la carte, par les actions `reserver`/`annuler` et par l'intégration côté serveur). Dans la carte, cocher l'étude coche aussi le soir ; cocher le soir coche aussi l'étude seulement quand le portail la propose cet enfant ce jour-là (certaines semaines, ou certaines communes, n'ont pas d'étude ; on peut ensuite la décocher seule, elle est gratuite) ; décocher le soir retire l'étude.
 
-**Coût.** La commune facture après coup et le portail n'annonce aucun montant ; la carte **estime** donc la différence de facture du mois à partir des tarifs que le portail publie : repas, accueil du matin et du soir à la journée jusqu'à 9 jours par mois, puis un forfait mensuel (accueil du matin 42,53 €, accueil du soir 55,59 €). Ces forfaits ne sont pas dans l'API : ce sont les valeurs d'Orgerus 2026-27 écrites dans `const.py` (`MONTHLY_FLAT`, `MONTHLY_DAYS_CAP`) à adapter pour une autre commune ou une autre année. Si les tarifs ne sont pas lisibles, la carte retombe sur le décompte des repas et accueils.
+**Coût.** La commune facture après coup et le portail n'annonce aucun montant ; la carte **estime** donc la différence de facture du mois à partir des tarifs que le portail publie : repas, accueil du matin et du soir à la journée jusqu'à 9 jours par mois, puis un forfait mensuel (accueil du matin 42,53 €, accueil du soir 55,59 €). Ces forfaits ne sont pas dans l'API : ce sont les valeurs par défaut d'Orgerus 2026-27, modifiables dans *Configurer* (voir *Tarifs et horaires*). Si les tarifs ne sont pas lisibles, la carte retombe sur le décompte des repas et accueils.
 
 **Si le portail a bougé.** Juste avant d'envoyer, l'intégration relit le portail. Si l'une des cases touchées n'est plus dans l'état que vous voyiez (l'autre parent a réservé entre-temps), ou si un changement n'est plus possible (date limite dépassée, service non proposé), **rien n'est envoyé** : la carte vous montre ce qui a changé et vous laisse revoir. Si seule une partie des changements est confirmée par le portail, la carte liste ceux qui n'ont pas abouti.
 
@@ -156,6 +156,19 @@ Si votre tableau de bord est en mode YAML et que la carte n'apparaît pas, ajout
 #### Commandes WebSocket
 
 Pour les curieux (la carte les utilise ; tout utilisateur connecté peut les appeler, pas besoin d'être administrateur) : `mon_espace_famille/planning` (`start` : une date de la semaine voulue), `mon_espace_famille/quote` (`changes` : liste de `{child, service, date, action: book|cancel}`) et `mon_espace_famille/apply` (`changes` et `base`, l'état de chaque case tel que la carte le voyait). Les actions `reserver` et `annuler` ci-dessus continuent de fonctionner.
+
+### Tarifs et horaires (réglages)
+
+*Paramètres* → *Appareils et services* → *Mon Espace Famille* → *Configurer* ouvre trois pages : les semaines lues, puis **Tarifs**, puis **Horaires**. Rien n'est enregistré avant la dernière page ; l'intégration se recharge ensuite.
+
+| Réglage | Défaut (Orgerus 2026-27) |
+|---|---|
+| Jours à partir desquels le forfait mensuel s'applique (0 = jamais) | 9 |
+| Forfait mensuel, accueil du matin / du soir (vide ou 0 = aucun) | 42,53 € / 55,59 € |
+| Prix à la journée du repas, du matin, du soir, de l'étude | vide = **le prix du portail**, qui suit déjà le profil de chaque enfant ; ne le remplissez que pour le remplacer |
+| Début et fin du matin, de la cantine, du soir, de l'étude | 7 h – 8 h 20, 11 h 30 – 13 h 20, 16 h 30 – 18 h 45, 17 h – 18 h 30 |
+
+Les horaires alimentent le calendrier, la légende et les phrases de la carte, et les capteurs de présence (la fin de classe est le début de l'accueil du soir, le retour prévu suit la fin de l'accueil du soir, le départ suit le début de l'accueil du matin). Les heures doivent être au format HH:MM, la fin après le début, les prix positifs. Si un prix ou un forfait diffère des valeurs d'Orgerus, l'estimation de la carte ajoute « (tarifs personnalisés) ».
 
 ### Chauffer la chambre au bon moment
 
@@ -197,7 +210,7 @@ Les jours sans réservation, `retour_prevu` est inconnu : la condition est fauss
 - Mon Espace Famille ne publie pas d'API : l'intégration parle à celle de son application web, qui peut changer sans prévenir.
 - Testée avec une seule commune, où les services sont payés après coup. Une commune en prépaiement, où il faut payer pour valider le panier, n'est pas prise en charge. La carte annonce donc des quantités et non un prix : le portail ne donne pas de montant à l'avance pour une commune à paiement différé (le montant n'est lu que s'il en annonce un, ce qui n'a pas pu être vérifié).
 - La carte déduit les jours d'école de ce que le portail propose : un jour férié ou un mercredi n'apparaît pas, mais un jour déjà verrouillé et jamais proposé avant ne peut pas toujours être distingué d'un jour fermé.
-- Les horaires (calendrier, départ à 8 h 10 ou 7 h, fin de classe, marge de trajet de 10 min) sont ceux de cette commune et les mêmes tous les jours (ils se changent dans `const.py`).
+- Les horaires se règlent dans *Configurer* (défauts d'Orgerus) et sont les mêmes tous les jours ; le départ à 8 h 10 sans accueil du matin et la marge de trajet de 10 min restent dans `const.py`.
 
 ### 💬 Communauté & support
 
@@ -289,7 +302,7 @@ The ← → arrows change week (past and future, read from the portal on demand)
 
 **Study hall and evening care.** The commune's rules require the evening care with the study hall: a study hall alone is refused (by the card, by the `reserver`/`annuler` actions and by the integration on the server). In the card, ticking the study hall also ticks the evening care; ticking the evening care also ticks the study hall only when the portal offers it to that child that day (some weeks, or some communes, have none; you can then untick it alone, it is free); unticking the evening care removes the study hall.
 
-**Cost.** The commune bills afterwards and the portal announces no amount, so the card **estimates** the month's bill difference from the rates the portal publishes: meals, morning and evening care per day up to 9 days a month, then a monthly flat fee (morning 42.53 €, evening 55.59 €). Those flat fees are not in the API: they are Orgerus 2026-27 values written in `const.py` (`MONTHLY_FLAT`, `MONTHLY_DAYS_CAP`), to adapt for another commune or year. If the rates cannot be read the card falls back to counting meals and cares.
+**Cost.** The commune bills afterwards and the portal announces no amount, so the card **estimates** the month's bill difference from the rates the portal publishes: meals, morning and evening care per day up to 9 days a month, then a monthly flat fee (morning 42.53 €, evening 55.59 €). Those flat fees are not in the API: they are the Orgerus 2026-27 defaults, editable in *Configure* (see *Prices and hours*). If the rates cannot be read the card falls back to counting meals and cares.
 
 **When the portal moved.** Right before sending, the integration reads the portal again. If one of the touched cells is no longer in the state you saw (the other parent booked meanwhile), or a change is no longer possible (deadline passed, service not offered), **nothing is sent**: the card shows what changed and lets you review. If the portal confirms only part of the changes, the card lists those that did not go through.
 
@@ -319,6 +332,19 @@ If your dashboard is in YAML mode and the card does not show up, add the resourc
 #### WebSocket commands
 
 For the curious (the card uses them; any logged-in user can call them, no need to be an administrator): `mon_espace_famille/planning` (`start`: a date of the wanted week), `mon_espace_famille/quote` (`changes`: a list of `{child, service, date, action: book|cancel}`) and `mon_espace_famille/apply` (`changes` and `base`, each cell's state as the card saw it). The `reserver` and `annuler` actions above keep working.
+
+### Prices and hours (settings)
+
+*Settings* → *Devices & services* → *Mon Espace Famille* → *Configure* opens three pages: the weeks read, then **Prices**, then **Hours**. Nothing is saved before the last page; the integration then reloads.
+
+| Setting | Default (Orgerus 2026-27) |
+|---|---|
+| Days after which the monthly flat fee applies (0 = never) | 9 |
+| Monthly flat fee, morning / evening care (empty or 0 = none) | €42.53 / €55.59 |
+| Per-day price of the canteen, morning, evening, study | empty = **the portal's price**, which already follows each child's profile; fill it only to override |
+| Start and end of morning care, canteen, evening care, study | 7:00–8:20, 11:30–13:20, 16:30–18:45, 17:00–18:30 |
+
+The hours feed the calendar, the card's legend and sentences, and the presence sensors (school ends when the evening care starts, the expected return follows the evening care's end, the departure follows the morning care's start). Times must be HH:MM, the end after the start, prices not negative. When a price or fee differs from Orgerus's, the card's estimate adds "(custom prices)".
 
 ### Heating a bedroom at the right time
 
@@ -360,7 +386,7 @@ On days with no booking `retour_prevu` is unknown, the condition is false and th
 - Mon Espace Famille publishes no API: the integration talks to its web app's one, which may change without notice.
 - Tested with a single commune, where services are paid afterwards. A commune where the cart must be paid in advance is not supported. The card therefore announces quantities, not a price: the portal gives no amount in advance for a deferred-payment commune (an amount is only read if the portal announces one, which could not be verified).
 - The card infers school days from what the portal offers: a holiday or a Wednesday does not show, but a day that is already locked and was never offered before cannot always be told apart from a closed day.
-- The hours (calendar, 8:10 or 7:00 departure, end of school, 10-minute travel margin) are that commune's, the same every day (they live in `const.py`).
+- The hours (calendar, 8:10 or 7:00 departure, end of school, 10-minute travel margin) are set in *Configure* (Orgerus defaults) and are the same every day; the 8:10 departure without morning care and the 10-minute travel margin stay in `const.py`.
 
 ### 💬 Community & support
 

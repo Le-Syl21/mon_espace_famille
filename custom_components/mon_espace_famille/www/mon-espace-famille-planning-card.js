@@ -43,6 +43,7 @@ const TEXTS = {
       evening_off: "sans accueil du soir, plus d'étude",
     },
     estimateNote: "Estimation, facturé après coup par la commune.",
+    customNote: "(tarifs personnalisés)",
     estTotal: "Total",
     capNote: (cap, fee) => `au-delà de ${cap} jours : forfait ${fee}`,
     flatStay: "forfait déjà atteint : aucun supplément",
@@ -153,6 +154,7 @@ const TEXTS = {
       evening_off: "no study hall without the evening care",
     },
     estimateNote: "Estimate, billed afterwards by the commune.",
+    customNote: "(custom prices)",
     estTotal: "Total",
     capNote: (cap, fee) => `beyond ${cap} days: flat fee ${fee}`,
     flatStay: "flat fee already reached: nothing more to pay",
@@ -907,7 +909,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
         else if (l.before.flat) notes.push(t.flatLeave);
         rows.push(`<li><b>${esc(money(l.delta, true))}</b> — ${esc(l.child_name)}, ${esc(month)} : ${esc(parts.join(", "))}${notes.length ? ` <small>(${esc(notes.join(" ; "))})</small>` : ""}</li>`);
       }
-      html = `<ul>${rows.join("")}</ul>${rows.length > 1 ? `<p><b>${t.estTotal} : ${esc(money(cost.amount, true))}</b></p>` : ""}<p>${t.estimateNote}</p>`;
+      html = `<ul>${rows.join("")}</ul>${rows.length > 1 ? `<p><b>${t.estTotal} : ${esc(money(cost.amount, true))}</b></p>` : ""}<p>${t.estimateNote}${cost.estimate.custom ? ` ${t.customNote}` : ""}</p>`;
     } else if (cost.mode === "amount") {
       const money = new Intl.NumberFormat(this._lang === "fr" ? "fr-FR" : "en-GB", { style: "currency", currency: cost.currency || "EUR" }).format(cost.amount);
       html = `<p>${t.costAmount(money)}</p>`;

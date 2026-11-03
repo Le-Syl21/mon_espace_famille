@@ -36,7 +36,39 @@
         "data_description": {
           "semaines": "Semaines lues après la semaine en cours, toutes les 30 minutes. « Réservation manquante » en demande au moins 1."
         }
+      },
+      "tarifs": {
+        "title": "Tarifs",
+        "description": "Les valeurs par défaut sont celles d'Orgerus 2026-27. Le prix à la journée de chaque service vient du portail (il suit le profil de chaque enfant) ; ne remplissez un prix ci-dessous que pour le remplacer. L'accueil du matin et du soir est facturé à la journée jusqu'au nombre de jours ci-dessous, puis un forfait mensuel.",
+        "data": {
+          "cap_days": "Jours au-delà desquels le forfait mensuel s'applique (0 = jamais)",
+          "flat_accueil_matin": "Forfait mensuel, accueil du matin (vide ou 0 = aucun)",
+          "flat_accueil_soir": "Forfait mensuel, accueil du soir (vide ou 0 = aucun)",
+          "price_repas": "Prix du repas par jour (vide = celui du portail)",
+          "price_accueil_matin": "Prix de l'accueil du matin par jour (vide = celui du portail)",
+          "price_accueil_soir": "Prix de l'accueil du soir par jour (vide = celui du portail)",
+          "price_etude": "Prix de l'étude par jour (vide = celui du portail)"
+        }
+      },
+      "horaires": {
+        "title": "Horaires",
+        "description": "Les valeurs par défaut sont les horaires officiels d'Orgerus. Ils alimentent le calendrier, la carte et l'heure de retour prévue.",
+        "data": {
+          "start_accueil_matin": "Accueil du matin : début",
+          "end_accueil_matin": "Accueil du matin : fin",
+          "start_repas": "Cantine : début",
+          "end_repas": "Cantine : fin",
+          "start_accueil_soir": "Accueil du soir : début",
+          "end_accueil_soir": "Accueil du soir : fin",
+          "start_etude": "Étude : début",
+          "end_etude": "Étude : fin"
+        }
       }
+    },
+    "error": {
+      "negative": "Ne peut pas être négatif.",
+      "invalid_time": "Saisissez une heure au format HH:MM.",
+      "end_before_start": "La fin doit être après le début."
     }
   },
   "selector": {

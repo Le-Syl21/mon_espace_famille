@@ -6,15 +6,13 @@ from dataclasses import dataclass
 from datetime import date, datetime, tzinfo
 
 from .const import (
-    DEPARTURE_MORNING_CARE,
     DEPARTURE_SCHOOL,
     EVENING_KINDS,
-    EVENING_SERVICE_END,
     KIND_ACCUEIL_MATIN,
-    SCHOOL_END,
     TRAVEL_MARGIN,
 )
 from .model import Child, Day
+from .settings import Settings
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,7 +34,7 @@ class DayPlan:
 NO_PLAN = DayPlan(None, None, None, None)
 
 
-def day_plan(child: Child, day: date, tz: tzinfo) -> DayPlan:
+def day_plan(child: Child, day: date, tz: tzinfo, settings: Settings | None = None) -> DayPlan:
     """The plan of `day`, times in the time zone `tz`.
 
     Away from 7:00 when a morning care is booked, else from 8:10; back one
@@ -55,8 +53,9 @@ def day_plan(child: Child, day: date, tz: tzinfo) -> DayPlan:
     if not any_service:
         return NO_PLAN
     kind = next((k for k in EVENING_KINDS if k in booked), None)
-    start = DEPARTURE_MORNING_CARE if KIND_ACCUEIL_MATIN in booked else DEPARTURE_SCHOOL
-    end = EVENING_SERVICE_END if kind else SCHOOL_END
+    settings = settings or Settings()
+    start = settings.morning_start if KIND_ACCUEIL_MATIN in booked else DEPARTURE_SCHOOL
+    end = settings.evening_end if kind else settings.school_end
     return DayPlan(
         evening_kind=kind,
         evening=booked[kind] if kind else None,

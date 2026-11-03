@@ -107,7 +107,7 @@ async def _planning(hass: HomeAssistant, msg: dict) -> dict:
     today = dt_util.now().date()
     week = await coordinator.async_week(monday, fresh=msg.get("fresh", False))
     cal = Calendar.of(_window(coordinator) + list(week.values()), today)
-    out = build_week(week, _names(coordinator), monday, today, cal)
+    out = build_week(week, _names(coordinator), monday, today, cal, coordinator.settings.hours)
     out["entry_id"] = coordinator.config_entry.entry_id
     out["commune"] = coordinator.data.commune
     return out
@@ -212,7 +212,14 @@ async def _estimate(
     coordinator: MefCoordinator, valid: list[Change], week_of: dict[tuple[int, date], Child]
 ) -> dict:
     """The monthly cost difference of the changes, from the portal's rates."""
-    unavailable = {"available": False, "total": None, "currency": "EUR", "lines": []}
+    settings = coordinator.settings
+    unavailable = {
+        "available": False,
+        "total": None,
+        "currency": "EUR",
+        "lines": [],
+        "custom": settings.customised,
+    }
     names = _names(coordinator)
     try:
         rates: dict[tuple[int, str], float | None] = {}
@@ -220,6 +227,9 @@ async def _estimate(
             if (ch.child, ch.service) in rates:
                 continue
             service = service_of(week_of[(ch.child, monday_of(ch.day))], ch.service)
+            if (price := settings.prices.get(ch.service)) is not None:
+                rates[(ch.child, ch.service)] = price  # the household's own price
+                continue
             by_id = await coordinator.async_rates(ch.child)
             rates[(ch.child, ch.service)] = by_id.get(service.service_id) if service else None
         # Every week of the touched months, to count what is booked already.
@@ -242,7 +252,9 @@ async def _estimate(
     except MefError as err:
         _LOGGER.debug("Rates unavailable: %s", err)
         return unavailable
-    return estimate(counts, [(c.child, c.service, c.day, c.action) for c in valid], rates, names)
+    return estimate(
+        counts, [(c.child, c.service, c.day, c.action) for c in valid], rates, names, settings
+    )
 
 
 async def _quote(hass: HomeAssistant, msg: dict) -> dict:
@@ -278,7 +290,7 @@ async def _quote(hass: HomeAssistant, msg: dict) -> dict:
         )
     valid = [ch for ch, item in zip(changes, items, strict=True) if item["valid"]]
     amount, post_paid, portal_errors = None, False, []
-    est = {"available": False, "total": None, "currency": "EUR", "lines": []}
+    est = {"available": False, "total": None, "currency": "EUR", "lines": [], "custom": False}
     if valid:
         amount, post_paid, portal_errors = await _portal_check(
             coordinator, valid, week_of, carts(valid, week_of)

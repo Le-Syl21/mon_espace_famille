@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 
 from homeassistant.components.calendar import CalendarEntity, CalendarEvent
 from homeassistant.core import HomeAssistant
@@ -75,13 +75,19 @@ def describe(entry: Day, day: date, today: date) -> str:
     return _TEXTS.get(entry.status, entry.status)
 
 
-def child_events(child: Child, first: date, end: date, today: date) -> list[CalendarEvent]:
+def child_events(
+    child: Child,
+    first: date,
+    end: date,
+    today: date,
+    hours_of: dict[str, tuple[time, time]] | None = None,
+) -> list[CalendarEvent]:
     """The child's events on the days in [first, end)."""
     tz = dt_util.get_default_time_zone()
     events = []
     for service in child.services.values():
         name = service_name(service)
-        hours = KIND_HOURS.get(service.kind)
+        hours = (hours_of or KIND_HOURS).get(service.kind)
         for day, entry in service.days.items():
             if not first <= day < end:
                 continue
@@ -115,7 +121,7 @@ class ChildCalendar(ChildEntity, CalendarEntity):
             return None
         now = dt_util.now()
         today = now.date()
-        for event in child_events(child, today, date.max, today):
+        for event in child_events(child, today, date.max, today, self.coordinator.settings.hours):
             if event.end_datetime_local > now:
                 return event
         return None
@@ -131,6 +137,7 @@ class ChildCalendar(ChildEntity, CalendarEntity):
             dt_util.as_local(start_date).date(),
             dt_util.as_local(end_date).date() + timedelta(days=1),
             today,
+            self.coordinator.settings.hours,
         )
         return [
             e

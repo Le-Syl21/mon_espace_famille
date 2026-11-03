@@ -26,6 +26,7 @@ from .const import (
     WEEKS_DEFAULT,
 )
 from .model import Child, Family, merge_week, monday_of, parse_children
+from .settings import Settings
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -54,6 +55,10 @@ class MefCoordinator(DataUpdateCoordinator[Family]):
         self._unsub_midnight = None
         self._weeks: dict[date, tuple[float, dict[int, Child]]] = {}
         self._rates: dict[int, tuple[float, dict[int, float]]] = {}
+
+    @property
+    def settings(self) -> Settings:
+        return Settings.from_options(self.config_entry.options)
 
     @property
     def weeks_ahead(self) -> int:

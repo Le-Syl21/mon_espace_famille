@@ -3,38 +3,9 @@
 import json
 from urllib.parse import parse_qsl
 
-import pytest
 from homeassistant.core import HomeAssistant
 
 from .conftest import ALICE, BOB, FakeMef
-
-
-class _Client:
-    """A WebSocket client connected on first use, once the test's clock is set."""
-
-    def __init__(self, hass, user, credential, hass_ws_client) -> None:
-        self._args = (hass, user, credential, hass_ws_client)
-        self._client = None
-
-    async def _connect(self):
-        hass, user, credential, hass_ws_client = self._args
-        refresh = await hass.auth.async_create_refresh_token(
-            user, "https://example.com/", credential=credential
-        )
-        return await hass_ws_client(hass, hass.auth.async_create_access_token(refresh))
-
-    async def send_json_auto_id(self, payload):
-        if self._client is None:
-            self._client = await self._connect()
-        return await self._client.send_json_auto_id(payload)
-
-    async def receive_json(self):
-        return await self._client.receive_json()
-
-
-@pytest.fixture
-def ws(hass, hass_admin_user, hass_admin_credential, hass_access_token, hass_ws_client):
-    return _Client(hass, hass_admin_user, hass_admin_credential, hass_ws_client)
 
 
 async def _ask(ws, payload):
@@ -173,7 +144,13 @@ async def test_quote_falls_back_to_counts(hass: HomeAssistant, ws, setup, fake: 
         "amount": None,
         "currency": "EUR",
         "post_paid": True,
-        "estimate": {"available": False, "total": None, "currency": "EUR", "lines": []},
+        "estimate": {
+            "available": False,
+            "total": None,
+            "currency": "EUR",
+            "lines": [],
+            "custom": False,
+        },
         "counts": [
             {"service": "accueil_soir", "name": "Accueil du soir", "book": 2, "cancel": 0},
             {"service": "repas", "name": "Cantine", "book": 0, "cancel": 1},

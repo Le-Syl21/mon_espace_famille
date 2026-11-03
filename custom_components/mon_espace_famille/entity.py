@@ -54,4 +54,9 @@ class ChildEntity(CoordinatorEntity[MefCoordinator]):
         child = self.child
         if child is None:
             return NO_PLAN
-        return day_plan(child, dt_util.now().date(), dt_util.get_default_time_zone())
+        return day_plan(
+            child,
+            dt_util.now().date(),
+            dt_util.get_default_time_zone(),
+            self.coordinator.settings,
+        )

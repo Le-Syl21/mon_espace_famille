@@ -36,7 +36,39 @@
         "data_description": {
           "semaines": "Weeks read after the current one, every 30 minutes. \"Booking missing\" needs at least 1."
         }
+      },
+      "tarifs": {
+        "title": "Prices",
+        "description": "Defaults are Orgerus 2026-27. The per-day price of each service comes from the portal (it follows each child's profile); fill a price below only to override it. Morning and evening care are billed per day up to the number of days below, then a monthly flat fee.",
+        "data": {
+          "cap_days": "Days after which the monthly flat fee applies (0 = never)",
+          "flat_accueil_matin": "Monthly flat fee, morning care (empty or 0 = none)",
+          "flat_accueil_soir": "Monthly flat fee, evening care (empty or 0 = none)",
+          "price_repas": "Canteen price per day (empty = the portal's)",
+          "price_accueil_matin": "Morning care price per day (empty = the portal's)",
+          "price_accueil_soir": "Evening care price per day (empty = the portal's)",
+          "price_etude": "Study hall price per day (empty = the portal's)"
+        }
+      },
+      "horaires": {
+        "title": "Hours",
+        "description": "Defaults are the official Orgerus hours. They feed the calendar, the card and the expected return time.",
+        "data": {
+          "start_accueil_matin": "Morning care : start",
+          "end_accueil_matin": "Morning care : end",
+          "start_repas": "Canteen : start",
+          "end_repas": "Canteen : end",
+          "start_accueil_soir": "Evening care : start",
+          "end_accueil_soir": "Evening care : end",
+          "start_etude": "Study hall : start",
+          "end_etude": "Study hall : end"
+        }
       }
+    },
+    "error": {
+      "negative": "Must not be negative.",
+      "invalid_time": "Enter a time as HH:MM.",
+      "end_before_start": "The end must be after the start."
     }
   },
   "selector": {

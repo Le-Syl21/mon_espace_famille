@@ -89,4 +89,29 @@ def test_children_and_months_are_not_mixed() -> None:
 
 def test_missing_rate_means_no_estimate() -> None:
     result = estimate({}, [(1, "repas", _day(5), "book")], RATES, NAMES)
-    assert result == {"available": False, "total": None, "currency": "EUR", "lines": []}
+    assert result == {
+        "available": False,
+        "total": None,
+        "currency": "EUR",
+        "lines": [],
+        "custom": False,
+    }
+
+
+def test_overridden_cap_and_flat_fee() -> None:
+    from custom_components.mon_espace_famille.settings import Settings
+
+    # Flat fee of 30 from the 5th day on, evening care at 6 a day.
+    settings = Settings.from_options({"cap_days": 5, "flat_accueil_soir": 30})
+    assert month_cost("accueil_soir", 5, 6.0, settings) == (30.0, False)
+    assert month_cost("accueil_soir", 6, 6.0, settings) == (30.0, True)
+    # Cap 0 means never; a blank flat fee (0) means none.
+    never = Settings.from_options({"cap_days": 0})
+    assert month_cost("accueil_soir", 30, 5.92, never) == (177.6, False)
+    none = Settings.from_options({"flat_accueil_soir": 0})
+    assert month_cost("accueil_soir", 12, 5.92, none) == (71.04, False)
+    # The morning care keeps its own default fee.
+    assert month_cost("accueil_matin", 12, 4.28, none) == (42.53, True)
+    result = estimate({}, [(1, "accueil_soir", _day(5), "book")], RATES, NAMES, settings)
+    assert result["custom"] is True and result["lines"][0]["cap"] == 5
+    assert result["lines"][0]["flat_fee"] == 30.0

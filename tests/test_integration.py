@@ -210,7 +210,21 @@ async def test_options_weeks(hass: HomeAssistant, setup, aioclient_mock) -> None
     entry = await setup()
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(result["flow_id"], {"semaines": 1})
-    assert entry.options == {"semaines": 1}
+    result = await hass.config_entries.options.async_configure(result["flow_id"], {"cap_days": 9})
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "start_accueil_matin": "07:00",
+            "end_accueil_matin": "08:20",
+            "start_repas": "11:30",
+            "end_repas": "13:20",
+            "start_accueil_soir": "16:30",
+            "end_accueil_soir": "18:45",
+            "start_etude": "17:00",
+            "end_etude": "18:30",
+        },
+    )
+    assert result["type"] == "create_entry" and entry.options["semaines"] == 1
     await hass.async_block_till_done()
     aioclient_mock.mock_calls.clear()
     await entry.runtime_data.async_refresh()

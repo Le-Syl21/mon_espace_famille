@@ -6,7 +6,7 @@ Pure functions over the model (no I/O) so they can be tested on their own.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Any
 
 from .const import (
@@ -137,7 +137,12 @@ def _apply_study_rule(child: dict) -> None:
 
 
 def build_week(
-    week: dict[int, Child], names: dict[int, str], monday: date, today: date, cal: Calendar
+    week: dict[int, Child],
+    names: dict[int, str],
+    monday: date,
+    today: date,
+    cal: Calendar,
+    hours: dict[str, tuple[time, time]] | None = None,
 ) -> dict[str, Any]:
     """The card's data for the week of `monday`; `week` holds only that week's days."""
     children = []
@@ -182,8 +187,8 @@ def build_week(
         "services": {
             k: {
                 "name": KIND_NAMES[k],
-                "start": KIND_HOURS[k][0].strftime("%H:%M"),
-                "end": KIND_HOURS[k][1].strftime("%H:%M"),
+                "start": (hours or KIND_HOURS)[k][0].strftime("%H:%M"),
+                "end": (hours or KIND_HOURS)[k][1].strftime("%H:%M"),
             }
             for k in PLANNING_ORDER
         },
