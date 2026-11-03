@@ -15,17 +15,14 @@ const ICONS = {
   accueil_soir: "mdi:weather-sunset-down",
   etude: "mdi:book-open-page-variant",
 };
-// Fallback when <ha-icon> is not defined (stroke icons, 24x24).
+// Inline icons (24x24), so they look the same with or without <ha-icon>.
+// Moon is filled, the others are strokes.
 const SVG = {
-  accueil_matin:
-    "M3 18h18M7 18a5 5 0 0 1 10 0M12 6v4M9.5 8.5 12 6l2.5 2.5M5 12l1.5 1.5M19 12l-1.5 1.5",
-  repas: "M6 3v8M9 3v8M6 7h3M7.5 11v10M17 3c-2 2-2.500 6 0 8v10",
-  accueil_soir:
-    "M3 18h18M7 18a5 5 0 0 1 10 0M12 4v5M9.500 6.500 12 9l2.500-2.500M5 12l1.500 1.500M19 12l-1.500 1.500",
-  etude: "M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4zM20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6z",
+  accueil_matin: { fill: false, d: "M2 18h20M6.500 18a5.500 5.500 0 0 1 11 0M12 3v6M9 6l3-3 3 3M4.500 11l2 2M19.500 11l-2 2" },
+  repas: { fill: false, d: "M5 3v6a2.500 2.500 0 0 0 5 0V3M7.500 3v18M18 21V3c-2.800 1.600-3.800 4.200-3.800 7.500H18" },
+  accueil_soir: { fill: true, d: "M20.500 14.500A9 9 0 0 1 9.500 3.500 9 9 0 1 0 20.500 14.500z" },
+  etude: { fill: false, d: "M12 6.500C10.300 5.300 7.800 5 3.500 5v13.500c4.300 0 6.800.3 8.500 1.500 1.700-1.200 4.200-1.500 8.500-1.500V5c-4.300 0-6.800.3-8.500 1.500zM12 6.500V20" },
 };
-const SVG_CHECK = "M5 12.500l4.500 4.500L19 7";
-const SVG_CROSS = "M6 6l12 12M18 6 6 18";
 const SVG_LOCK = "M7 11V8a5 5 0 0 1 10 0v3M6 11h12v9H6z";
 const SVG_PENCIL = "M4 20l1-4L16 5l3 3L8 19zM14 7l3 3";
 
@@ -39,10 +36,13 @@ const TEXTS = {
     noDay: "Aucun jour ouvert cette semaine.",
     noChild: "Aucun enfant à afficher.",
     legend: "Légende",
-    booked: "Réservé",
-    notBooked: "Non réservé",
-    locked: "Verrouillé (plus modifiable)",
-    changed: "Modifié, pas encore envoyé",
+    short: { accueil_matin: "Matin", repas: "Midi", accueil_soir: "Soir", etude: "Étude" },
+    toBooked: "→ réservé",
+    toCancelled: "→ annulé",
+    booked: "Vert = réservé",
+    notBooked: "Rouge = non réservé",
+    locked: "Grisé = verrouillé (plus modifiable)",
+    changed: "Contour = modifié, pas envoyé",
     svc: {
       accueil_matin: "Accueil du matin",
       repas: "Repas",
@@ -138,10 +138,13 @@ const TEXTS = {
     noDay: "No open day this week.",
     noChild: "No child to show.",
     legend: "Legend",
-    booked: "Booked",
-    notBooked: "Not booked",
-    locked: "Locked (can no longer be changed)",
-    changed: "Changed, not sent yet",
+    short: { accueil_matin: "Morning", repas: "Lunch", accueil_soir: "Evening", etude: "Study" },
+    toBooked: "→ booked",
+    toCancelled: "→ cancelled",
+    booked: "Green = booked",
+    notBooked: "Red = not booked",
+    locked: "Greyed = locked (no longer editable)",
+    changed: "Outline = changed, not sent",
     svc: {
       accueil_matin: "Morning care",
       repas: "Canteen",
@@ -254,38 +257,41 @@ ha-card { container-type: inline-size; }
 .dh b { display: block; color: var(--primary-text-color); font-size: 1.15em; }
 .dh.today-col b { color: var(--primary-color); text-decoration: underline; text-underline-offset: 3px; }
 .name { font-weight: 500; padding: 0 6px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cell { display: flex; justify-content: center; padding: 6px 4px; }
-.slots { display: grid; gap: 6px; }
+.cell { display: flex; justify-content: center; padding: 5px 2px; margin: 0 1px; border-radius: 12px; background: color-mix(in srgb, var(--primary-text-color) 6%, transparent); }
+.slots { display: grid; gap: 3px; }
 .grid .slots { grid-template-columns: repeat(2, var(--size)); }
-.row .slots { grid-template-columns: repeat(var(--kinds), var(--size)); gap: 6px; }
+.row .slots { grid-template-columns: repeat(var(--kinds), var(--size)); }
 .slot { width: var(--size); height: var(--size); }
-.pill { position: relative; width: var(--size); height: var(--size); padding: 0; border-radius: 10px; border: 2px solid var(--secondary-text-color); background: transparent; color: var(--secondary-text-color); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-.pill svg.glyph { width: calc(var(--size) * .58); height: calc(var(--size) * .58); fill: none; stroke: currentColor; stroke-width: 2.8; stroke-linecap: round; stroke-linejoin: round; }
-.chip { position: absolute; width: calc(var(--size) * .5); height: calc(var(--size) * .5); border-radius: 50%; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color); color: var(--primary-text-color); display: inline-flex; align-items: center; justify-content: center; --mdc-icon-size: calc(var(--size) * .34); }
-.chip svg { width: calc(var(--size) * .34); height: calc(var(--size) * .34); fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
-.chip.svc { left: calc(var(--size) * -.16); top: calc(var(--size) * -.16); }
-.chip.lockb { right: calc(var(--size) * -.16); bottom: calc(var(--size) * -.16); }
-.chip.edit { right: calc(var(--size) * -.16); top: calc(var(--size) * -.16); background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
-.pill.on { background: var(--success-color, #2e7d32); border-color: var(--success-color, #2e7d32); color: #fff; }
-.pill.off { border-style: dashed; }
-.pill.locked { cursor: not-allowed; }
-.pill.locked.on { background: color-mix(in srgb, var(--success-color, #2e7d32) 16%, transparent); border: 2px solid var(--secondary-text-color); color: var(--success-color, #2e7d32); }
-.pill.locked.off { background: var(--secondary-background-color); border: 2px dotted var(--secondary-text-color); }
+.pill { position: relative; width: var(--size); height: var(--size); padding: 0; border-radius: 10px; border: 2px solid var(--success-color, #2e7d32); background: var(--success-color, #2e7d32); color: #fff; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.pill svg.ico { width: calc(var(--size) * .72); height: calc(var(--size) * .72); fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.pill svg.ico.filled { fill: currentColor; stroke-width: 1; }
+.pill.off { background: color-mix(in srgb, var(--error-color, #c62828) 14%, var(--card-background-color, #fff)); border-color: var(--error-color, #c62828); color: var(--error-color, #c62828); }
+.pill.locked { cursor: not-allowed; opacity: .55; filter: saturate(.55); }
+.chip { position: absolute; width: calc(var(--size) * .4); height: calc(var(--size) * .4); border-radius: 50%; background: var(--card-background-color, #fff); border: 1px solid var(--divider-color); color: var(--primary-text-color); display: inline-flex; align-items: center; justify-content: center; }
+.chip svg { width: 70%; height: 70%; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.chip.lockb { right: -3px; bottom: -3px; }
+.chip.edit { right: -4px; top: -4px; background: var(--primary-color); border-color: var(--primary-color); color: #fff; }
 .pill.draft { outline: 3px solid var(--primary-color); outline-offset: 2px; }
 .pill:focus-visible { outline: 3px solid var(--primary-text-color); outline-offset: 2px; }
-.grid { --size: 34px; }
-.row { --size: 32px; }
+.grid { --size: 36px; }
+@container (min-width: 430px) { .grid { --size: 42px; } }
+.row { --size: 40px; }
 @container (max-width: 560px) {
   .table { grid-template-columns: repeat(var(--days), minmax(0, 1fr)); }
   .table .corner { display: none; }
   .table .name { grid-column: 1 / -1; padding-top: 6px; }
 }
-.legend { display: flex; flex-wrap: wrap; gap: 8px 16px; padding: 12px 6px 4px; font-size: .82em; color: var(--secondary-text-color); border-top: 1px solid var(--divider-color); margin-top: 8px; }
-.legend > span { display: inline-flex; align-items: center; gap: 6px; }
-.legend .pill { --size: 24px; cursor: default; border-radius: 7px; margin: 3px; }
-.legend .pill.draft { outline-width: 2px; }
-.legend ha-icon { --mdc-icon-size: 18px; color: var(--primary-text-color); }
-.legend svg.svc { width: 18px; height: 18px; fill: none; stroke: var(--primary-text-color); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; padding: 10px 6px 4px; font-size: .8em; color: var(--primary-text-color); border-top: 1px solid var(--divider-color); margin-top: 8px; }
+.legend > span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend .pill { --size: 22px; cursor: default; border-radius: 6px; border-width: 2px; opacity: 1; filter: none; }
+.legend .pill.locked { opacity: .55; filter: saturate(.55); }
+.legend .pill.draft { outline-width: 2px; outline-offset: 1px; }
+.legend + .legend { border-top: 0; margin-top: 0; padding-top: 4px; }
+.mini { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 6px; background: var(--success-color, #2e7d32); border: 2px solid var(--success-color, #2e7d32); color: #fff; vertical-align: -6px; margin-right: 4px; }
+.mini.off { background: color-mix(in srgb, var(--error-color, #c62828) 14%, var(--card-background-color, #fff)); border-color: var(--error-color, #c62828); color: var(--error-color, #c62828); }
+.mini.neutral { background: var(--secondary-text-color); border-color: var(--secondary-text-color); color: var(--card-background-color, #fff); }
+.mini svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.mini svg.filled { fill: currentColor; stroke-width: 1; }
 .foot { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 10px 6px 4px; border-top: 1px solid var(--divider-color); margin-top: 6px; }
 .foot .count { flex: 1 1 100%; font-weight: 500; }
 .foot .count small { color: var(--secondary-text-color); font-weight: 400; margin-left: 6px; }
@@ -534,13 +540,13 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
 
   // ---- rendering --------------------------------------------------------------
 
-  _icon(kind, cls = "") {
-    if (customElements.get("ha-icon")) return `<ha-icon class="${cls}" icon="${ICONS[kind]}"></ha-icon>`;
-    return `<svg class="svc ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${SVG[kind]}"/></svg>`;
+  _icon(kind) {
+    const i = SVG[kind];
+    return `<svg class="ico ${i.fill ? "filled" : ""}" viewBox="0 0 24 24" aria-hidden="true"><path d="${i.d}"/></svg>`;
   }
 
-  _glyph(path, cls = "glyph") {
-    return `<svg ${cls ? `class="${cls}"` : ""} viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
+  _glyph(path) {
+    return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${path}"/></svg>`;
   }
 
   _pill(plan, child, kind, date) {
@@ -551,10 +557,9 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     if (v.cell.locked) cls.push("locked");
     if (v.draft) cls.push("draft");
     return `<button class="${cls.join(" ")}" data-child="${child.id}" data-service="${kind}" data-date="${date}" aria-label="${label}" title="${label}" aria-pressed="${v.booked}" ${v.cell.locked ? 'aria-disabled="true"' : ""}>
-      ${this._glyph(v.booked ? SVG_CHECK : SVG_CROSS)}
-      <span class="chip svc">${this._icon(kind)}</span>
-      ${v.cell.locked ? `<span class="chip lockb">${this._glyph(SVG_LOCK, "")}</span>` : ""}
-      ${v.draft ? `<span class="chip edit">${this._glyph(SVG_PENCIL, "")}</span>` : ""}
+      ${this._icon(kind)}
+      ${v.cell.locked ? `<span class="chip lockb">${this._glyph(SVG_LOCK)}</span>` : ""}
+      ${v.draft ? `<span class="chip edit">${this._glyph(SVG_PENCIL)}</span>` : ""}
     </button>`;
   }
 
@@ -584,14 +589,15 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
   _legend(plan) {
     const t = this._t;
     const kinds = KINDS.filter((k) => this._children(plan).some((c) => c.services.includes(k)));
-    const mini = (cls, glyph, lock, edit) =>
-      `<span class="pill ${cls}">${this._glyph(glyph)}${lock ? `<span class="chip lockb">${this._glyph(SVG_LOCK, "")}</span>` : ""}${edit ? `<span class="chip edit">${this._glyph(SVG_PENCIL, "")}</span>` : ""}</span>`;
+    const tile = (cls, extra = "") => `<span class="pill ${cls}" aria-hidden="true">${extra}</span>`;
+    const lock = `<span class="chip lockb">${this._glyph(SVG_LOCK)}</span>`;
     return `<div class="legend" aria-label="${t.legend}">
-      ${kinds.map((k) => `<span>${this._icon(k)}${esc(t.svc[k])} ${esc(this._hour(plan.services[k].start))}–${esc(this._hour(plan.services[k].end))}</span>`).join("")}
-      <span>${mini("on", SVG_CHECK)}${t.booked}</span>
-      <span>${mini("off", SVG_CROSS)}${t.notBooked}</span>
-      <span>${mini("on locked", SVG_CHECK, true)}${mini("off locked", SVG_CROSS, true)}${t.locked}</span>
-      <span>${mini("on draft", SVG_CHECK, false, true)}${t.changed}</span>
+      ${kinds.map((k) => `<span><span class="mini neutral">${this._icon(k)}</span>${esc(t.short[k])} ${esc(this._hour(plan.services[k].start))}–${esc(this._hour(plan.services[k].end))}</span>`).join("")}
+    </div><div class="legend">
+      <span>${tile("on")}${t.booked}</span>
+      <span>${tile("off")}${t.notBooked}</span>
+      <span>${tile("on locked", lock)}${tile("off locked", lock)}${t.locked}</span>
+      <span>${tile("on draft")}${t.changed}</span>
     </div>`;
   }
 
@@ -658,7 +664,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     const days = Number(table.style.getPropertyValue("--days"));
     const kinds = Number(table.style.getPropertyValue("--kinds"));
     const wide = table.clientWidth > 560;
-    const fits = days * (kinds * 38 + 8) <= table.clientWidth - (wide ? 72 : 0);
+    const fits = days * (kinds * 44 + 12) <= table.clientWidth - (wide ? 72 : 0);
     table.classList.toggle("row", fits);
     table.classList.toggle("grid", !fits);
   }
@@ -822,7 +828,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
         for (const c of list) {
           const q = items.get(keyOf(c.child, c.service, c.date));
           const bad = q && !q.valid;
-          html += `<li><span class="tag ${c.action}">${c.action === "book" ? t.actBook : t.actCancel}</span>${esc(t.svc[c.service])}, ${esc(this._longDay(c.date))}${bad ? ` <span class="bad">— ${esc(t.refusedItem(t.reasons[q.reason] || q.reason || "?"))}</span>` : ""}</li>`;
+          html += `<li><span class="mini ${c.action === "book" ? "on" : "off"}">${this._icon(c.service)}</span>${esc(t.svc[c.service])}, ${esc(this._longDay(c.date))} <b>${c.action === "book" ? t.toBooked : t.toCancelled}</b>${bad ? ` <span class="bad">— ${esc(t.refusedItem(t.reasons[q.reason] || q.reason || "?"))}</span>` : ""}</li>`;
         }
         html += `</ul>`;
       }

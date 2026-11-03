@@ -105,10 +105,10 @@ Une carte pour voir **et modifier** la semaine d'un coup d'œil : une ligne par 
 
 | Pastille | Sens |
 |---|---|
-| ✓ plein | Réservé, modifiable |
-| ✗ en pointillés | Non réservé, modifiable |
-| ✓ ou ✗ grisé avec un petit cadenas | Verrouillé : jour passé, date limite d'annulation dépassée (réservé) ou de réservation dépassée (non réservé). Le survol ou la lecture d'écran donne la date limite. |
-| Contour épais et crayon | Modifié, pas encore envoyé |
+| Tuile verte | Réservé, modifiable |
+| Tuile rouge | Non réservé, modifiable |
+| Tuile grisée avec un petit cadenas | Verrouillé : jour passé, date limite d'annulation dépassée (réservé) ou de réservation dépassée (non réservé). Le survol ou la lecture d'écran donne la date limite. |
+| Contour épais et crayon (la tuile montre la nouvelle couleur) | Modifié, pas encore envoyé |
 | (vide) | Service non proposé ce jour-là |
 
 Les flèches ← → changent de semaine (passé comme futur, lues sur le portail à la demande), « Aujourd'hui » revient à la semaine en cours, et l'en-tête donne le numéro de semaine et les dates (« Semaine 45 · 2/11 → 6/11 »).
@@ -264,9 +264,9 @@ A card to see **and edit** the week at a glance: a row per child, a column per o
 
 | Pastille | Meaning |
 |---|---|
-| solid ✓ | Booked, editable |
-| dashed ✗ | Not booked, editable |
-| greyed ✓ or ✗ with a small padlock | Locked: past day, cancellation deadline passed (booked) or booking deadline passed (not booked). Hovering or a screen reader gives the deadline. |
+| Green tile | Booked, editable |
+| Red tile | Not booked, editable |
+| Greyed tile with a small padlock | Locked: past day, cancellation deadline passed (booked) or booking deadline passed (not booked). Hovering or a screen reader gives the deadline. |
 | Thick outline and pencil | Changed, not sent yet |
 | (empty) | Service not offered that day |
 
