@@ -8,6 +8,13 @@ Une intégration Home Assistant pour [Mon Espace Famille](https://app.monespacef
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
 [![Open in HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Le-Syl21&repository=mon_espace_famille&category=integration)
 
+<p align="center">
+  <img src="docs/card-study-light.webp" alt="Planning card / Carte de planning" width="250">
+  <img src="docs/card-week-dark.webp" alt="Dark theme / Thème sombre" width="250">
+  <img src="docs/card-confirm-cost.webp" alt="Confirmation with the cost / Confirmation avec le coût" width="250">
+</p>
+<p align="center"><sub>Une carte pour réserver et annuler : un tap prépare un brouillon, « Valider » demande confirmation avec le coût estimé.<br>One card to book and cancel: a tap prepares a draft, "Valider" asks for confirmation with the estimated cost.</sub></p>
+
 <a name="français"></a>
 ## <img src=".github/flags/fr.svg" height="14" alt="FR"> Français
 
