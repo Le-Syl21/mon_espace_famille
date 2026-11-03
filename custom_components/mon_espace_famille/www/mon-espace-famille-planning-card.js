@@ -55,14 +55,10 @@ const TEXTS = {
     validate: "Valider",
     cellBooked: "réservé",
     cellNotBooked: "non réservé",
+    stateEditable: "modifiable",
+    stateLocked: "verrouillé",
     willBook: "sera réservé",
     willCancel: "sera annulé",
-    lockedPast: "jour passé",
-    lockedDeadline: "date limite dépassée",
-    lockedAttended: "déjà pointé",
-    lockedPending: "en cours de traitement par le portail",
-    lockedFailing: "en défaut",
-    until: (d) => `modifiable jusqu'au ${d} inclus`,
     confirmTitle: "Confirmer les modifications",
     changesBlock: "Modifications",
     costBlock: "Coût",
@@ -157,14 +153,10 @@ const TEXTS = {
     validate: "Validate",
     cellBooked: "booked",
     cellNotBooked: "not booked",
+    stateEditable: "editable",
+    stateLocked: "locked",
     willBook: "will be booked",
     willCancel: "will be cancelled",
-    lockedPast: "past day",
-    lockedDeadline: "deadline passed",
-    lockedAttended: "already checked in",
-    lockedPending: "being processed by the portal",
-    lockedFailing: "failing",
-    until: (d) => `can be changed until ${d} included`,
     confirmTitle: "Confirm the changes",
     changesBlock: "Changes",
     costBlock: "Cost",
@@ -522,20 +514,9 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     const parts = [child.name, t.svc[service], this._longDay(date)];
     let state = v.booked ? t.cellBooked : t.cellNotBooked;
     if (v.draft) state = v.booked ? t.willBook : t.willCancel;
-    let text = `${parts.join(", ")} : ${state}`;
-    if (v.cell.locked) {
-      const why = {
-        past: t.lockedPast,
-        deadline: t.lockedDeadline,
-        attended: t.lockedAttended,
-        pending: t.lockedPending,
-        failing: t.lockedFailing,
-      }[v.cell.reason];
-      text += ` (${why || t.locked}${v.cell.deadline && v.cell.reason === "deadline" ? `, ${this._fullDate(v.cell.deadline)}` : ""})`;
-    } else if (v.cell.booked && v.cell.deadline) {
-      text += ` (${t.until(this._fullDate(v.cell.deadline))})`;
-    }
-    return text;
+    // Two facts only: booked or not, editable or locked. The reason and the
+    // deadline are in the portal and in the confirmation dialog.
+    return `${parts.join(", ")} : ${state}, ${v.cell.locked ? t.stateLocked : t.stateEditable}`;
   }
 
   // ---- rendering --------------------------------------------------------------
