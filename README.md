@@ -118,7 +118,7 @@ Une carte pour voir **et modifier** la semaine d'un coup d'œil : une ligne par 
 | Contour épais et crayon (la tuile montre la nouvelle couleur) | Modifié, pas encore envoyé |
 | (vide) | Service non proposé ce jour-là |
 
-Les flèches ← → changent de semaine (passé comme futur, lues sur le portail à la demande), « Aujourd'hui » revient à la semaine en cours, et l'en-tête donne le numéro de semaine et les dates (« Semaine 45 · 2/11 → 6/11 »).
+Sur téléphone, **glisser le doigt** vers la gauche (semaine suivante) ou la droite (précédente) sur la carte change aussi de semaine, et les flèches du clavier ← → font de même quand la carte a le focus ; si le tableau déborde (commune à 5 jours), un glissement le fait d'abord défiler, et ne change de semaine qu'une fois au bout. Les flèches ← → changent de semaine (passé comme futur, lues sur le portail à la demande), « Aujourd'hui » revient à la semaine en cours, et l'en-tête donne le numéro de semaine et les dates (« Semaine 45 · 2/11 → 6/11 »).
 
 **Modifier.** Toucher une pastille modifiable change un *brouillon* : rien n'est envoyé. Les cases modifiées sont mises en évidence et un pied de carte indique « n modification(s) » avec *Annuler les modifications* et *Valider*. Le brouillon survit au changement de semaine (on peut préparer plusieurs semaines puis valider d'un coup) ; il est perdu si l'on recharge la page.
 
@@ -294,7 +294,7 @@ A card to see **and edit** the week at a glance: a row per child, a column per o
 | Thick outline and pencil | Changed, not sent yet |
 | (empty) | Service not offered that day |
 
-The ← → arrows change week (past and future, read from the portal on demand), "Today" goes back to the current week, and the header gives the week number and dates ("Week 45 · 2/11 → 6/11").
+On a phone, **swiping** left (next week) or right (previous) on the card changes week too, and the ← → keyboard keys do the same when the card has focus; if the table overflows (a 5-day commune) a swipe scrolls it first and only changes week once it reaches the end. The ← → arrows change week (past and future, read from the portal on demand), "Today" goes back to the current week, and the header gives the week number and dates ("Week 45 · 2/11 → 6/11").
 
 **Editing.** Tapping an editable pastille changes a *draft*: nothing is sent. Changed cells are highlighted and a footer shows "n change(s)" with *Undo changes* and *Validate*. The draft survives week navigation (prepare several weeks, validate once); it is lost when the page reloads.
 

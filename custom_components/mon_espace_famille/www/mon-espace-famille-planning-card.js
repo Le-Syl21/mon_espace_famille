@@ -272,7 +272,14 @@ button { font: inherit; color: inherit; }
 .nav:hover, .nav:focus-visible { background: var(--secondary-background-color); }
 .nav svg { width: 22px; height: 22px; }
 .today { font-size: .85em; }
-.wrap { container-type: inline-size; }
+.wrap { container-type: inline-size; touch-action: pan-y; }
+.table { touch-action: pan-y; }
+.table.scrolls { touch-action: pan-x pan-y; }
+.wrap.slide-left .table { animation: slide-left .22s ease-out; }
+.wrap.slide-right .table { animation: slide-right .22s ease-out; }
+@keyframes slide-left { from { transform: translateX(28px); opacity: .35; } to { transform: none; opacity: 1; } }
+@keyframes slide-right { from { transform: translateX(-28px); opacity: .35; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .wrap.slide-left .table, .wrap.slide-right .table { animation: none; } }
 ha-card { container-type: inline-size; }
 .table { display: grid; grid-template-columns: minmax(52px, max-content) repeat(var(--days), minmax(0, 1fr)); align-items: center; column-gap: 2px; row-gap: 6px; overflow-x: auto; padding: 8px 0 4px; }
 .dh { text-align: center; font-size: .85em; color: var(--secondary-text-color); line-height: 1.15; padding: 2px 0 4px; border-bottom: 1px solid var(--divider-color); }
@@ -299,7 +306,7 @@ ha-card { container-type: inline-size; }
 @container (min-width: 430px) { .grid { --size: 42px; } }
 .row { --size: 40px; }
 @container (max-width: 560px) {
-  .table { grid-template-columns: repeat(var(--days), minmax(0, 1fr)); }
+  .table { grid-template-columns: repeat(var(--days), minmax(calc(var(--size) * 2 + 10px), 1fr)); }
   .table .corner { display: none; }
   .table .name { grid-column: 1 / -1; padding-top: 6px; }
 }
@@ -386,6 +393,10 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
       if (ev.key === "Escape" && this._modal && this._modal.phase !== "applying") this._closeModal();
     };
     this.shadowRoot.addEventListener("click", (ev) => this._click(ev));
+    this.shadowRoot.addEventListener("touchstart", (ev) => this._touchStart(ev), { passive: true });
+    this.shadowRoot.addEventListener("touchmove", (ev) => this._touchMove(ev), { passive: false });
+    this.shadowRoot.addEventListener("touchend", (ev) => this._touchEnd(ev));
+    this.shadowRoot.addEventListener("keydown", (ev) => this._key(ev));
   }
 
   static getStubConfig() {
@@ -582,7 +593,9 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     const kinds = KINDS.filter((k) => children.some((c) => c.services.includes(k)));
     const layout = this._config.layout === "row" ? "row" : "grid";
     const narrow = new Intl.DateTimeFormat(this._lang, { weekday: "narrow" });
-    let html = `<div class="wrap"><div class="table ${layout}" style="--days:${plan.days.length};--kinds:${kinds.length}" role="table">`;
+    const slide = this._slide ? ` slide-${this._slide}` : "";
+    this._slide = null;
+    let html = `<div class="wrap${slide}" tabindex="0" role="group"><div class="table ${layout}" style="--days:${plan.days.length};--kinds:${kinds.length}" role="table">`;
     html += `<div class="corner"></div>`;
     for (const d of plan.days) {
       const date = parseISO(d.date);
@@ -658,6 +671,8 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
       </ha-card>
       ${this._modal ? this._modalHtml() : ""}`;
     this._fit();
+    const tbl = this.shadowRoot.querySelector(".table");
+    if (tbl) tbl.classList.toggle("scrolls", tbl.scrollWidth > tbl.clientWidth + 1);
     if (this._modal && this._modal.focus !== false) {
       const target = this.shadowRoot.querySelector(".dialog [data-modal-primary]") || this.shadowRoot.querySelector(".dialog button");
       if (target && !this._modal.focused) {
@@ -671,6 +686,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
   // phone), fall back to the 2 x 2 grid instead of letting pastilles overlap.
   _fit() {
     const table = this.shadowRoot.querySelector(".table");
+    if (table) table.classList.toggle("scrolls", table.scrollWidth > table.clientWidth + 1);
     if (!table || this._config.layout !== "row") return;
     const days = Number(table.style.getPropertyValue("--days"));
     const kinds = Number(table.style.getPropertyValue("--kinds"));
@@ -697,11 +713,7 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
     if (!btn) return;
     const act = btn.dataset.act;
     if (act === "prev" || act === "next" || act === "today") {
-      const cur = parseISO(this._monday);
-      const next = act === "today" ? mondayOf(new Date()) : addDays(cur, act === "prev" ? -7 : 7);
-      this._monday = iso(next);
-      this._notice = null;
-      this._load();
+      this._shiftWeek(act === "today" ? 0 : act === "prev" ? -1 : 1);
     } else if (act === "undo") {
       this._draft.clear();
       this._declined?.clear();
@@ -716,6 +728,68 @@ class MonEspaceFamillePlanningCard extends HTMLElement {
       this._closeModal();
       this._load(true);
     }
+  }
+
+  // Move by `weeks` (0: back to the current week). Drafts are kept.
+  _shiftWeek(weeks, slide) {
+    const next = weeks === 0 ? mondayOf(new Date()) : addDays(parseISO(this._monday), 7 * weeks);
+    this._monday = iso(next);
+    this._notice = null;
+    this._slide = slide || (weeks === 0 ? null : weeks > 0 ? "left" : "right");
+    this._load();
+  }
+
+  // Horizontal swipe on the card changes week: left = next, right = previous.
+  // Vertical scrolling is left to the browser (touch-action: pan-y), a drag in
+  // the table scrolls it while it can, and the dashboard's own gestures do
+  // not see a swipe the card consumed.
+  _touchStart(ev) {
+    this._swipe = null;
+    if (this._modal || ev.touches.length !== 1 || ev.target.closest?.(".modal")) return;
+    const t = ev.touches[0];
+    this._swipe = { x: t.clientX, y: t.clientY, time: ev.timeStamp, mode: null };
+  }
+
+  _touchMove(ev) {
+    const g = this._swipe;
+    if (!g || ev.touches.length !== 1) return;
+    const t = ev.touches[0];
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (!g.mode && Math.max(Math.abs(dx), Math.abs(dy)) > 10) {
+      g.mode = "ignore";
+      if (Math.abs(dx) > Math.abs(dy) * 1.5) {
+        const table = ev.target.closest?.(".table");
+        const room = table && table.scrollWidth > table.clientWidth + 1;
+        const canScroll = room && (dx < 0 ? table.scrollLeft < table.scrollWidth - table.clientWidth - 1 : table.scrollLeft > 1);
+        if (!canScroll) g.mode = "swipe";
+      }
+    }
+    if (g.mode === "swipe") {
+      if (ev.cancelable) ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }
+
+  _touchEnd(ev) {
+    const g = this._swipe;
+    this._swipe = null;
+    if (!g || g.mode !== "swipe") return;
+    const t = ev.changedTouches[0];
+    const dx = t.clientX - g.x;
+    const dy = t.clientY - g.y;
+    if (Math.abs(dx) >= 60 && Math.abs(dx) > Math.abs(dy) * 1.5 && ev.timeStamp - g.time <= 800) {
+      ev.stopPropagation();
+      this._shiftWeek(dx < 0 ? 1 : -1);
+    }
+  }
+
+  _key(ev) {
+    if (this._modal || ev.altKey || ev.ctrlKey || ev.metaKey) return;
+    if (ev.key === "ArrowLeft") this._shiftWeek(-1);
+    else if (ev.key === "ArrowRight") this._shiftWeek(1);
+    else return;
+    ev.preventDefault();
   }
 
   _toggle(pill) {

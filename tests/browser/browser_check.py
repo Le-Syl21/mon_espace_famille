@@ -259,6 +259,114 @@ def race_check(browser, tokens, failures: list[str]) -> None:
     ctx.close()
 
 
+def swipe(page: Page, cdp, x0: float, y0: float, x1: float, y1: float, steps: int = 8) -> None:
+    """A finger drag, with real touch events (Chromium DevTools protocol)."""
+
+    def send(kind: str, x: float, y: float) -> None:
+        points = [] if kind == "touchEnd" else [{"x": x, "y": y}]
+        cdp.send("Input.dispatchTouchEvent", {"type": kind, "touchPoints": points})
+
+    send("touchStart", x0, y0)
+    for i in range(1, steps + 1):
+        send("touchMove", x0 + (x1 - x0) * i / steps, y0 + (y1 - y0) * i / steps)
+        page.wait_for_timeout(15)
+    send("touchEnd", x1, y1)
+    page.wait_for_timeout(500)
+
+
+def swipe_check(browser, tokens, failures: list[str]) -> None:
+    """Swiping the card changes week; vertical drags, table scrolls and the dashboard are left alone."""
+    admin("/__admin/reset", {})
+    nxt = date.today() - timedelta(days=date.today().weekday()) + timedelta(days=7)
+    ctx = new_context(browser, tokens, SHOTS["390"], False)
+    page = ctx.new_page()
+    cdp = ctx.new_cdp_session(page)
+    open_view(page, "planning")
+    c = card(page)
+    label = c.locator(".head .label")
+    url = page.url
+
+    def box():
+        b = c.locator(".table").bounding_box()
+        return b["x"] + b["width"] / 2, b["y"] + 40
+
+    def week() -> str:
+        return label.inner_text().split("\n")[0]
+
+    first = week()
+    x, y = box()
+    swipe(page, cdp, x + 100, y, x - 100, y)  # left: next week
+    if week() == first:
+        failures.append("swipe left did not change the week")
+    second = week()
+    shot(page, "swipe-next")
+    swipe(page, cdp, x - 100, y, x + 100, y)  # right: back
+    if week() != first:
+        failures.append("swipe right did not come back")
+    swipe(page, cdp, x, y, x, y + 120)  # vertical: nothing
+    swipe(page, cdp, x + 20, y, x - 20, y)  # too short: nothing
+    if week() != first:
+        failures.append("a vertical or short drag changed the week")
+    if page.url != url:
+        failures.append(f"the dashboard changed view: {url} -> {page.url}")
+    print("swipe: weeks", first, "->", second, "->", week(), "view unchanged:", page.url == url)
+    # Keyboard: arrows move the week when the card has focus.
+    c.locator(".wrap").focus()
+    page.keyboard.press("ArrowRight")
+    page.wait_for_timeout(600)
+    if week() == first:
+        failures.append("ArrowRight did not change the week")
+    page.keyboard.press("ArrowLeft")
+    page.wait_for_timeout(600)
+    # A draft survives swipes.
+    pill_el = c.locator(".pill:not([aria-disabled])").first
+    pill_el.click()
+    swipe(page, cdp, x + 100, y, x - 100, y)
+    swipe(page, cdp, x - 100, y, x + 100, y)
+    if "1 modification" not in c.locator(".foot .count").inner_text():
+        failures.append("the draft did not survive the swipes")
+    ctx.close()
+
+    # A 5-day week overflows the table on a phone: it scrolls first, then swipes change week.
+    for sid in ("1_1", "7_7", "8_8"):
+        admin(
+            "/__admin/open",
+            {"sid": sid, "date": (nxt + timedelta(days=2)).strftime("%Y%m%d"), "open": True},
+        )
+    ctx = new_context(browser, tokens, SHOTS["390"], False)
+    page = ctx.new_page()
+    cdp = ctx.new_cdp_session(page)
+    open_view(page, "planning")
+    c = card(page)
+    label = c.locator(".head .label")
+    c.locator('[data-act="next"]').click()
+    try:
+        c.locator(".table.scrolls").wait_for(timeout=8000)
+    except Exception:
+        print(
+            "DEBUG table:",
+            c.locator(".table").evaluate(
+                "e => ({sw: e.scrollWidth, cw: e.clientWidth, days: e.style.cssText, cls: e.className, cols: getComputedStyle(e).gridTemplateColumns})"
+            ),
+        )
+        shot(page, "debug-overflow")
+        raise
+    shot(page, "swipe-overflow")
+    x, y = box()
+    wk = week()
+    scroll = lambda: c.locator(".table").evaluate("e => e.scrollLeft")
+    swipe(page, cdp, x + 120, y, x - 120, y)
+    if scroll() <= 0 or week() != wk:
+        failures.append(
+            f"a drag in the overflowing table should scroll it (scroll {scroll()}, {week()})"
+        )
+    swipe(page, cdp, x + 150, y, x - 150, y)  # now at the right edge: change week
+    if week() == wk:
+        failures.append("a swipe at the table's edge did not change the week")
+    print("overflow: scrolled then changed week:", wk, "->", week())
+    ctx.close()
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     wait_for(PORTAL + "/__admin/state")
@@ -271,6 +379,7 @@ def main() -> None:
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
         race_check(browser, tokens, failures)
+        swipe_check(browser, tokens, failures)
         # 1. Layouts and themes: the week view in every combination.
         for sname, size in SHOTS.items():
             for dark in (False, True):
