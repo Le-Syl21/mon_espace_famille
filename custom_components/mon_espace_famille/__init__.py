@@ -9,7 +9,7 @@ from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
 from .coordinator import MefConfigEntry, MefCoordinator
-from .frontend import async_register_card
+from .frontend import async_register_card, async_remove_resource
 from .model import Family
 from .services import async_setup_services
 from .websocket import async_setup_websocket
@@ -60,3 +60,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: MefConfigEntry) -> bool
 
 async def _async_reload(hass: HomeAssistant, entry: MefConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: MefConfigEntry) -> None:
+    """The last account removed takes the card's Lovelace resource with it."""
+    if not any(e.entry_id != entry.entry_id for e in hass.config_entries.async_entries(DOMAIN)):
+        await async_remove_resource(hass)

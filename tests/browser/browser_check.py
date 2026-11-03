@@ -180,6 +180,85 @@ def admin(path, data=None):
     )
 
 
+def ws_call(page: Page, message: dict):
+    return page.evaluate(
+        "message => document.querySelector('home-assistant').hass.callWS(message)", message
+    )
+
+
+def delayed_context(browser, tokens, seconds: float):
+    """A phone-sized context where the card's JavaScript arrives late (slow network)."""
+    ctx = new_context(browser, tokens, SHOTS["390"], False)
+    page = ctx.new_page()
+
+    def slow(route):
+        page.wait_for_timeout(int(seconds * 1000))
+        route.continue_()
+
+    page.route("**/mon-espace-famille-planning-card.js*", slow)
+    return ctx, page
+
+
+def race_check(browser, tokens, failures: list[str]) -> None:
+    """The card must render on the first paint even when its file is slow.
+
+    As an extra module only, the dashboard can render before the card is
+    defined and show "Custom element doesn't exist"; as a Lovelace resource
+    (created by the integration) the dashboard waits for it.
+    """
+    ctx = new_context(browser, tokens, SHOTS["390"], False)
+    page = ctx.new_page()
+    open_view(page, "planning")
+    found = [
+        r
+        for r in ws_call(page, {"type": "lovelace/resources"})
+        if r["url"].split("?")[0].endswith("mon-espace-famille-planning-card.js")
+    ]
+    print("resources created by the integration:", [r["url"] for r in found])
+    if len(found) != 1 or found[0]["type"] != "module":
+        failures.append(f"expected one module resource, got {found}")
+        ctx.close()
+        return
+    resource = found[0]
+    ctx.close()
+    # 1. Without the resource (extra module alone) and a slow file.
+    ws_ctx = new_context(browser, tokens, SHOTS["390"], False)
+    admin_page = ws_ctx.new_page()
+    open_view(admin_page, "planning")
+    ws_call(admin_page, {"type": "lovelace/resources/delete", "resource_id": resource["id"]})
+    ws_ctx.close()
+    ctx, page = delayed_context(browser, tokens, 5)
+    page.goto(f"{HA}/lovelace/planning")
+    try:
+        page.wait_for_selector("hui-error-card", timeout=4500)
+        print("race reproduced with the extra module alone: error card shown")
+        shot(page, "race-extra-module-only")
+    except Exception:  # noqa: BLE001
+        print("race NOT reproduced with the extra module alone")
+        failures.append("the slow-network race was not reproduced without the resource")
+    page.unroute_all(behavior="wait")
+    ctx.close()
+    # 2. With the resource again, the same slow file: first paint is the card.
+    ws_ctx = new_context(browser, tokens, SHOTS["390"], False)
+    admin_page = ws_ctx.new_page()
+    open_view(admin_page, "planning")
+    ws_call(
+        admin_page,
+        {"type": "lovelace/resources/create", "res_type": "module", "url": resource["url"]},
+    )
+    ws_ctx.close()
+    ctx, page = delayed_context(browser, tokens, 5)
+    page.goto(f"{HA}/lovelace/planning")
+    card(page).locator(".table").wait_for(timeout=60000)
+    errors = page.locator("hui-error-card").count()
+    print("with the resource and a slow file: card rendered, error cards:", errors)
+    if errors:
+        failures.append("an error card showed although the card is a resource")
+    shot(page, "race-resource")
+    page.unroute_all(behavior="wait")
+    ctx.close()
+
+
 def main() -> None:
     OUT.mkdir(exist_ok=True)
     wait_for(PORTAL + "/__admin/state")
@@ -191,6 +270,7 @@ def main() -> None:
 
     with sync_playwright() as pw:
         browser = pw.chromium.launch()
+        race_check(browser, tokens, failures)
         # 1. Layouts and themes: the week view in every combination.
         for sname, size in SHOTS.items():
             for dark in (False, True):

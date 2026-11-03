@@ -134,7 +134,7 @@ Les flèches ← → changent de semaine (passé comme futur, lues sur le portai
 
 #### Ajouter la carte
 
-L'intégration charge la carte toute seule dans tous les tableaux de bord (mode « stockage » comme mode YAML) : aucune ressource à déclarer. Dans l'éditeur du tableau de bord, *Ajouter une carte* → *Personnalisé : Mon Espace Famille*, ou en YAML :
+En mode « stockage », l'intégration ajoute aussi la carte comme **ressource Lovelace** (module, sans doublon, à jour quand le fichier change, retirée avec le compte) : c'est ce qui fiabilise l'affichage dans l'application mobile sur un réseau lent, où un module chargé autrement peut arriver après le tableau de bord (« Custom element doesn't exist »). Elle reste aussi chargée comme module supplémentaire, ce qui suffit en mode YAML. Dans l'éditeur du tableau de bord, *Ajouter une carte* → *Personnalisé : Mon Espace Famille*, ou en YAML :
 
 ```yaml
 type: custom:mon-espace-famille-planning-card
@@ -310,7 +310,7 @@ The ← → arrows change week (past and future, read from the portal on demand)
 
 #### Adding the card
 
-The integration loads the card in every dashboard by itself (storage mode and YAML mode alike): no resource to declare. In the dashboard editor, *Add card* → *Custom: Mon Espace Famille*, or in YAML:
+In storage mode the integration also adds the card as a **Lovelace resource** (module, never duplicated, updated when the file changes, removed with the account): that is what makes it reliable in the mobile app on a slow network, where a module loaded another way can arrive after the dashboard ("Custom element doesn't exist"). It stays loaded as an extra module too, which is enough in YAML mode. In the dashboard editor, *Add card* → *Custom: Mon Espace Famille*, or in YAML:
 
 ```yaml
 type: custom:mon-espace-famille-planning-card
